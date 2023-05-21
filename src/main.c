@@ -14,7 +14,12 @@ Value stack[MAXSTACK];
 long int pos;
 
 void print_stack(){
-    for(int i = 0; i < MAXSTACK; i++)
+    //printf("pos: %ld\n", pos);
+    for(long int i = 0; i < pos; i++)
+        Value_print(&stack[i]);
+}
+void print_full_stack(){
+    for(long int i = 0; i < MAXSTACK; i++)
         Value_print(&stack[i]);
 }
 
@@ -38,7 +43,7 @@ void dealloc_values(){
         Value v = stack[i];
         if(v.v_type != STRING)
             continue;
-        free(v.string);    
+        free(v.string);
     }
 }
 /// deallocates a value if it contains a pointer to allocated memory
@@ -48,6 +53,11 @@ void dealloc_value(Value* v){
     free(v->string);
 }
 
+
+static Instruction* inst;
+static size_t instruction_amount;
+static size_t inst_pos = 0;
+
 int main(int argc, char** args){
 
     if (argc != 2)
@@ -55,19 +65,18 @@ int main(int argc, char** args){
     check_source_ext(args[1]);
 
 
-
     FILE* source_file;
     errno_t error = fopen_s(&source_file, args[1], "r");
     if (error != 0){
         crash_on_error(error);
     }
-    size_t instruction_amount;
-    Instruction* inst = parse_from_file(source_file, &instruction_amount);
+    inst = parse_from_file(source_file, &instruction_amount);
 
-    for(size_t i = 0; i < instruction_amount; i++){
-        excecute_instruction(&inst[i]);
+    while(inst_pos < instruction_amount){
+        excecute_instruction(&inst[inst_pos]);
+
+        inst_pos++;
     }
-    //print_stack();
     fclose(source_file);
     free(inst);
     dealloc_values();
@@ -75,14 +84,18 @@ int main(int argc, char** args){
 }
 void excecute_instruction(Instruction* inst){
     switch (inst->c_type) {
+        case PRINT_STACK:
+            print_stack();
+            break;
         case PUSH:
             push_value(inst->v);
             break;
         case POP:
-            pop_value();
+            Value v = pop_value();
+            dealloc_value(&v);
             break;
         case PRINT:
-            Value v = pop_value();
+            v = pop_value();
             Value_print(&v);
             push_value(v);
             break;
@@ -221,7 +234,9 @@ void excecute_instruction(Instruction* inst){
                 res.i = a.d == b.d;
             }
             else if (a.v_type == STRING && b.v_type == STRING){
-                res.i = strcmp(a.string, b.string) == true;
+                res.i = strcmp(a.string, b.string) == 0;
+                dealloc_value(&a);
+                dealloc_value(&b);
             }
             else 
                 err_print("invalid equation operands");
@@ -231,21 +246,23 @@ void excecute_instruction(Instruction* inst){
         case GREAT:
             b = pop_value();
             a = pop_value();
+            res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.i > b.i;
             }
             else if (a.v_type == INT && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = (double)a.i > b.d;
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.d > (double)b.i;
             }
             else if (a.v_type == DOUBLE && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = a.d > b.d;
+            }
+            else if (a.v_type == STRING && b.v_type == STRING){
+                res.i = strcmp(a.string, b.string) > 0;
+                dealloc_value(&a);
+                dealloc_value(&b);
             }
             else 
                 err_print("invalid equation operands");
@@ -255,21 +272,23 @@ void excecute_instruction(Instruction* inst){
         case GREATEQ:
             b = pop_value();
             a = pop_value();
+            res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.i >= b.i;
             }
             else if (a.v_type == INT && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = (double)a.i >= b.d;
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.d >= (double)b.i;
             }
             else if (a.v_type == DOUBLE && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = a.d >= b.d;
+            }
+            else if (a.v_type == STRING && b.v_type == STRING){
+                res.i = strcmp(a.string, b.string) >= 0;
+                dealloc_value(&a);
+                dealloc_value(&b);
             }
             else 
                 err_print("invalid equation operands");
@@ -279,21 +298,23 @@ void excecute_instruction(Instruction* inst){
         case LESS:
             b = pop_value();
             a = pop_value();
+            res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.i < b.i;
             }
             else if (a.v_type == INT && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = (double)a.i < b.d;
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.d < (double)b.i;
             }
             else if (a.v_type == DOUBLE && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = a.d < b.d;
+            }
+            else if (a.v_type == STRING && b.v_type == STRING){
+                res.i = strcmp(a.string, b.string) < 0;
+                dealloc_value(&a);
+                dealloc_value(&b);
             }
             else 
                 err_print("invalid equation operands");
@@ -303,21 +324,23 @@ void excecute_instruction(Instruction* inst){
         case LESSEQ:
             b = pop_value();
             a = pop_value();
+            res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.i <= b.i;
             }
             else if (a.v_type == INT && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = (double)a.i <= b.d;
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.d <= (double)b.i;
             }
             else if (a.v_type == DOUBLE && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = a.d <= b.d;
+            }
+            else if (a.v_type == STRING && b.v_type == STRING){
+                res.i = strcmp(a.string, b.string) <= 0;
+                dealloc_value(&a);
+                dealloc_value(&b);
             }
             else 
                 err_print("invalid equation operands");

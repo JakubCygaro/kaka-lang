@@ -84,6 +84,15 @@ TokenStream* get_token_stream(FILE* source_file){
             token.line = line;
             add_token(t_stream, token);
             continue;
+        
+        case '#':
+            char skipped;
+            while ((skipped = getc(source_file)) != EOF) {
+                if(skipped == '\n')
+                    break;
+            }
+
+            continue;
 
         default:
             char buf[60];
@@ -152,6 +161,8 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
         return LESS;
     else if (strcmp(cmd_str, "lesseq") == 0)
         return LESSEQ;
+    else if (strcmp(cmd_str, "_stack") == 0)
+        return PRINT_STACK;
     else
         err_print("unrecognized instruction type");
     return PRINT;

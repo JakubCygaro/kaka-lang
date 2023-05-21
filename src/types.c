@@ -73,6 +73,21 @@ void CommandType_print(COMMAND_TYPE c_type){
         case CMP:
             printf("cmp\n");
             break;
+        case GREAT:
+            printf("great\n");
+            break;
+        case GREATEQ:
+            printf("greateq\n");
+            break;
+        case LESS:
+            printf("less\n");
+            break;
+        case LESSEQ:
+            printf("lesseq\n");
+            break;
+        case PRINT_STACK:
+            printf("_stack\n");
+            break;
         default:
             printf("unhandled command type\n");
             break;

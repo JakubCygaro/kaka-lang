@@ -43,6 +43,7 @@ typedef enum {
     GREATEQ,
     LESS,
     LESSEQ,
+    PRINT_STACK,
 } COMMAND_TYPE;
 
 typedef struct {
