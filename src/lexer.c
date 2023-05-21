@@ -18,6 +18,8 @@ TokenStream* get_token_stream(FILE* source_file){
     char current_c;
     while((current_c = getc(source_file)) != EOF){
 
+        //printf("%c\n", current_c);
+
         switch (current_c) {
         
         case 'a':
@@ -50,13 +52,13 @@ TokenStream* get_token_stream(FILE* source_file){
             Token token = scan_for_instruction(source_file, current_c);
             token.line = line;
             add_token(t_stream, token);
-        continue;
+            continue;
 
         case '\n':
             line++;
         case ' ':
         case '\t':
-        continue;
+            continue;
 
         case '-':
         case '1':
@@ -73,6 +75,15 @@ TokenStream* get_token_stream(FILE* source_file){
             token.line = line;
             add_token(t_stream, token);
         continue;
+
+        case '\"':
+            token = scan_for_string(source_file, current_c);
+
+            //Value_print(&token.v);
+
+            token.line = line;
+            add_token(t_stream, token);
+            continue;
 
         default:
             char buf[60];
@@ -104,6 +115,7 @@ static Token scan_for_instruction(FILE* source, char first){
     char buf[length + 1];
     fread(buf, sizeof(char), length, source);
     buf[length] = '\0';
+    //printf("%s\n", buf);
     COMMAND_TYPE c_type = get_command_type(buf);
     Token t;
     t.t_type = COMMAND;
@@ -197,6 +209,37 @@ static Token scan_for_number(FILE * source, char first){
         t.v = v;
         return t;
     }
+}
+static Token scan_for_string(FILE* source, char first){
+    //first is " at this point
+    //ungetc(first, source);
+    long start = ftell(source);
+    long end = start;
+
+    char c;
+    while((c = getc(source)) != EOF){
+        end++;
+        if(c == '\"')
+            break;
+    }
+
+    fseek(source, start, SEEK_SET);
+    long length = end - start - 1;
+    char buf[length + 1];
+    fread(buf, sizeof(char), length, source);
+    getc(source);
+    buf[length] = '\0';
+    
+    char* string = malloc((length + 1) * sizeof(char));
+    strcpy_s(string, (length + 1) * sizeof(char), buf);
+    Token t;
+    t.t_type = VALUE;
+    Value v;
+    v.v_type = STRING;
+    v.string = string;
+    t.v = v;
+    return t;
+
 }
 static void add_token(TokenStream* t_stream, Token token){
     t_stream->size++;

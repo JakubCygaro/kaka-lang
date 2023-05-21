@@ -122,7 +122,7 @@ static void ensure_token(TOKEN_TYPE type, Token* t){
     if (t == NULL)
         err_print("premature end of input");
     else if (t->t_type != type)
-        err_print("invalid token 2");
+        err_print("invalid token, line: %lld", t->line);
 }
 static void ensure_value(VALUE_TYPE type, Value* v){
     if (v->v_type != type)

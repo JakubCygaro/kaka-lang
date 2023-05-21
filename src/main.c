@@ -6,6 +6,7 @@
 #include <string.h>
 #include "errors.h"
 #include "parser.h"
+#include <stdbool.h>
 
 #define MAXSTACK 1000
 
@@ -32,6 +33,21 @@ void check_source_ext(char*);
 
 void excecute_instruction(Instruction* inst);
 
+void dealloc_values(){
+    for (int i = 0; i < MAXSTACK; i++){
+        Value v = stack[i];
+        if(v.v_type != STRING)
+            continue;
+        free(v.string);    
+    }
+}
+/// deallocates a value if it contains a pointer to allocated memory
+void dealloc_value(Value* v){
+    if(v->v_type != STRING)
+            return;
+    free(v->string);
+}
+
 int main(int argc, char** args){
 
     if (argc != 2)
@@ -54,7 +70,7 @@ int main(int argc, char** args){
     //print_stack();
     fclose(source_file);
     free(inst);
-
+    dealloc_values();
     return 0;
 }
 void excecute_instruction(Instruction* inst){
@@ -191,21 +207,21 @@ void excecute_instruction(Instruction* inst){
         case CMP:
             a = pop_value();
             b = pop_value();
+            res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.i == b.i;
             }
             else if (a.v_type == INT && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = (double)a.i == b.d;
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
-                res.v_type = INT;
                 res.i = a.d == (double)b.i;
             }
             else if (a.v_type == DOUBLE && b.v_type == DOUBLE){
-                res.v_type = INT;
                 res.i = a.d == b.d;
+            }
+            else if (a.v_type == STRING && b.v_type == STRING){
+                res.i = strcmp(a.string, b.string) == true;
             }
             else 
                 err_print("invalid equation operands");
