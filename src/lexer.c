@@ -163,6 +163,10 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
         return LESSEQ;
     else if (strcmp(cmd_str, "_stack") == 0)
         return PRINT_STACK;
+    else if (strcmp(cmd_str, "int") == 0)
+        return CAST_INT;
+    else if (strcmp(cmd_str, "double") == 0)
+        return CAST_DOUBLE;
     else
         err_print("unrecognized instruction type");
     return PRINT;

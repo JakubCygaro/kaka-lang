@@ -99,10 +99,40 @@ void excecute_instruction(Instruction* inst){
             Value_print(&v);
             push_value(v);
             break;
+        case CAST_INT:
+            v = pop_value();
+            Value res;
+            res.v_type = INT;
+            if(v.v_type == DOUBLE){
+                res.i = (int)v.d;
+            }
+            else if(v.v_type == INT){
+                res.i = v.i;
+                push_value(res);
+            }
+            else {
+                err_print("invalid cast exception, line: %lld", inst_pos + 1);
+            }
+            push_value(res);
+            break;
+        case CAST_DOUBLE:
+            v = pop_value();
+            res.v_type = DOUBLE;
+            if(v.v_type == INT){
+                res.d = (double)v.i;
+            }
+            else if(v.v_type == DOUBLE){
+                res.d = v.d;
+                push_value(res);
+            }
+            else {
+                err_print("invalid cast exception, line: %lld", inst_pos + 1);
+            }
+            push_value(res);
+            break;
         case ADD:
             Value a = pop_value();
             Value b = pop_value();
-            Value res;
 
             if(a.v_type == INT && b.v_type == INT){
                 res.v_type = INT;

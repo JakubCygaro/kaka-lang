@@ -44,6 +44,8 @@ typedef enum {
     LESS,
     LESSEQ,
     PRINT_STACK,
+    CAST_INT,
+    CAST_DOUBLE,
 } COMMAND_TYPE;
 
 typedef struct {

@@ -55,6 +55,18 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             none_v.none = NULL;
             i.v = none_v;
             break;
+        case CAST_INT:
+            i.c_type = CAST_INT;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
+        case CAST_DOUBLE:
+            i.c_type = CAST_DOUBLE;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
         case ADD:
             i.c_type = ADD;
             none_v.v_type = NONE;
