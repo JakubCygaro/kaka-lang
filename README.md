@@ -24,25 +24,25 @@ Kaka supports 3 variable types:
 - `string`
 
 ## Commands
-- push: push a value onto the stack
-- pop: remove a value from the stack
-- add: add two values 
-- sub: subtract two values
-- mul: multiply two values
-- div: divide two values
-- mod: divide two values and push the remainder
-- cmp: compare two values and push the result (1 for equality, 0 for inequality)
-- great: compare two values to check which is greater
-- greateq: compare two values to chech which is greater or equal
-- less: compare two values to check which is smaller
-- lesseq: compare two values to check which is smaller or equal
-- int: cast a value from `double` to `int`
-- double: cast a value from `int` to `double`
-- clone: clone a value
-- print: print a value from the stack without consuming it
-- lab: create a label
-- jmp: jump to a label
-- if: if the value on the stack is equal to 1, excecute the next command, otherwise skip it, consume the value in the process
+- `push`: push a value onto the stack
+- `pop`: remove a value from the stack
+- `add`: add two values 
+- `sub`: subtract two values
+- `mul`: multiply two values
+- `div`: divide two values
+- `mod`: divide two values and push the remainder
+- `cmp`: compare two values and push the result (1 for equality, 0 for inequality)
+- `great`: compare two values to check which is greater
+- `greateq`: compare two values to chech which is greater or equal
+- `less`: compare two values to check which is smaller
+- `lesseq`: compare two values to check which is smaller or equal
+- `int`: cast a value from `double` to `int`
+- `double`: cast a value from `int` to `double`
+- `clone`: clone a value
+- `print`: print a value from the stack without consuming it
+- `lab`: create a label
+- `jmp`: jump to a label
+- `if`: if the value on the stack is equal to 1, excecute the next command, otherwise skip it, consume the value in the process
 - \_stack: print the stack without consuming any value
 
 ## Examples
