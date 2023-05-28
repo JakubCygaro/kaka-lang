@@ -152,6 +152,24 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             none_v.none = NULL;
             i.v = none_v;
             break;
+        case AND:
+            i.c_type = AND;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
+        case OR:
+            i.c_type = OR;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
+        case NOT:
+            i.c_type = NOT;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
         default:
             err_print("command WIP");
     }

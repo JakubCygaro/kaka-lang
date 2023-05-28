@@ -13,5 +13,6 @@
 
 void err_print(const char*, ...);
 void crash_on_error(errno_t);
+void verr_print(const char* fmt, va_list args);
 
 #endif

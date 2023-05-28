@@ -166,6 +166,12 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
         return IF;
     else if (strcmp(cmd_str, "clone") == 0)
         return CLONE;
+    else if (strcmp(cmd_str, "and") == 0)
+        return AND;
+    else if (strcmp(cmd_str, "or") == 0)
+        return OR;
+    else if (strcmp(cmd_str, "not") == 0)
+        return NOT;
     else
         err_print("unrecognized instruction type `%s`", cmd_str);
     return PRINT;

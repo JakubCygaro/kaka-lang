@@ -51,6 +51,9 @@ typedef enum {
     JUMP,
     IF,
     CLONE,
+    AND,
+    OR,
+    NOT,
 } COMMAND_TYPE;
 
 typedef struct {

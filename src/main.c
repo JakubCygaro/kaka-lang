@@ -1,4 +1,5 @@
 #include <corecrt.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -8,40 +9,49 @@
 #include "parser.h"
 #include <stdbool.h>
 #include "label.h"
+#include <vadefs.h>
 
 #define MAXSTACK 1000
+FILE* source_file;
+
+void dealloc_values();
+void dealloc_inst();
+void crash(const char* fmt, ...);
+void check_source_ext(char*);
+void excecute_instruction(Instruction* inst);
+void dealloc_value(Value* v);
 
 static Instruction* inst;
 static size_t instruction_amount;
 static size_t inst_pos = 0;
 Value stack[MAXSTACK];
 long int pos = 0;
+LabelMap label_map;
 
 void print_stack(){
-    for(long int i = 0; i < pos; i++)
+    for(long int i = pos-1; i >= 0; i--)
         Value_print(&stack[i]);
 }
 void print_full_stack(){
-    for(long int i = 0; i < MAXSTACK; i++)
+    for(long int i = MAXSTACK-1; i >= 0; i--)
         Value_print(&stack[i]);
 }
 
 void push_value(Value v){
     if (pos >= MAXSTACK){
 
-        err_print("stack overflowed");
+        crash("stack overflowed");
     }
     stack[pos++] = v;
 }
 Value pop_value(){
     if (pos < 0){
         //CommandType_print(inst[inst_pos].c_type);
-        err_print("empty stack");
+        crash("empty stack");
     }
     return stack[--pos];
 }
 
-LabelMap label_map;
 
 void setup_labels(){
     label_map = LabelMap_new();
@@ -50,7 +60,7 @@ void setup_labels(){
             case LABEL:
                 bool out = LabelMap_insert(&label_map, inst[inst_pos].v.string, inst_pos);
                 if(!out)
-                    err_print("redeclaration of label `%s`", inst[inst_pos].v.string);
+                    crash("redeclaration of label `%s`", inst[inst_pos].v.string);
             
             default:
             ;
@@ -65,7 +75,7 @@ void setup_labels(){
                 size_t ret;
                 bool out = LabelMap_get(&label_map, inst[inst_pos].v.string, &ret);
                 if(!out)
-                    err_print("no such label `%s`", inst[inst_pos].v.string);
+                    crash("no such label `%s`", inst[inst_pos].v.string);
                 inst[inst_pos].jump_dest = ret;
             default:
             ;
@@ -75,16 +85,10 @@ void setup_labels(){
     inst_pos = 0;
 }
 
-void check_source_ext(char*);
-
-void excecute_instruction(Instruction* inst);
 
 void dealloc_values(){
     for (int i = 0; i < MAXSTACK; i++){
-        Value v = stack[i];
-        if(v.v_type != STRING)
-            continue;
-        free(v.string);
+        dealloc_value(&stack[i]);
     }
 }
 /// deallocates a value if it contains a pointer to allocated memory
@@ -100,7 +104,6 @@ void dealloc_inst(){
 }
 
 
-
 int main(int argc, char** args){
 
     if (argc != 2)
@@ -108,7 +111,6 @@ int main(int argc, char** args){
     check_source_ext(args[1]);
 
 
-    FILE* source_file;
     errno_t error = fopen_s(&source_file, args[1], "r");
     if (error != 0){
         crash_on_error(error);
@@ -158,7 +160,7 @@ void excecute_instruction(Instruction* inst){
                 push_value(res);
             }
             else {
-                err_print("invalid cast exception, line: %lld", inst_pos + 1);
+                crash("invalid cast exception, line: %lld", inst_pos + 1);
             }
             push_value(res);
             break;
@@ -173,7 +175,7 @@ void excecute_instruction(Instruction* inst){
                 push_value(res);
             }
             else {
-                err_print("invalid cast exception, line: %lld", inst_pos + 1);
+                crash("invalid cast exception, line: %lld", inst_pos + 1);
             }
             push_value(res);
             break;
@@ -203,7 +205,7 @@ void excecute_instruction(Instruction* inst){
                 res.d = a.d + b.d;
             }
             else{
-                err_print("invalid addition operands");
+                crash("invalid addition operands");
             }
 
             push_value(res);
@@ -228,7 +230,7 @@ void excecute_instruction(Instruction* inst){
                 res.d = b.d - a.d;
             }
             else 
-                err_print("invalid subtraction operands");
+                crash("invalid subtraction operands");
 
             push_value(res);
             break;
@@ -252,7 +254,7 @@ void excecute_instruction(Instruction* inst){
                 res.d = a.d * b.d;
             }
             else 
-                err_print("invalid multiplication operands");
+                crash("invalid multiplication operands");
 
             push_value(res);
             break;
@@ -261,10 +263,10 @@ void excecute_instruction(Instruction* inst){
             a = pop_value();
             if(divisor.v_type == INT)
                 if(divisor.i == 0)
-                    err_print("zero divisor");
+                    crash("zero divisor");
             if(divisor.v_type == DOUBLE)
                 if(divisor.d == 0)
-                    err_print("zero divisor");
+                    crash("zero divisor");
 
             if(a.v_type == INT && divisor.v_type == INT){
                 res.v_type = DOUBLE;
@@ -283,7 +285,7 @@ void excecute_instruction(Instruction* inst){
                 res.d = a.d / divisor.d;
             }
             else 
-                err_print("invalid division operands");
+                crash("invalid division operands");
 
             push_value(res);
             break;
@@ -292,17 +294,17 @@ void excecute_instruction(Instruction* inst){
             a = pop_value();
             if(divisor.v_type == INT)
                 if(divisor.i == 0)
-                    err_print("zero divisor");
+                    crash("zero divisor");
             if(divisor.v_type == DOUBLE)
                 if(divisor.d == 0)
-                    err_print("zero divisor");
+                    crash("zero divisor");
             
             if(a.v_type == INT && divisor.v_type == INT){
                 res.v_type = INT;
                 res.i = a.i % divisor.i;
             }
             else 
-                err_print("invalid modulo operands");
+                crash("invalid modulo operands");
             
             push_value(res);
             break;
@@ -328,7 +330,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid comparison operands");
+                crash("invalid comparison operands");
             
             push_value(res);
             break;
@@ -354,7 +356,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid great operands");
+                crash("invalid great operands");
             
             push_value(res);
             break;
@@ -380,7 +382,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid greateq operands");
+                crash("invalid greateq operands");
             
             push_value(res);
             break;
@@ -406,7 +408,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid less operands");
+                crash("invalid less operands");
             
             push_value(res);
             break;
@@ -432,7 +434,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid lesseq operands");
+                crash("invalid lesseq operands");
             
             push_value(res);
             break;
@@ -447,7 +449,7 @@ void excecute_instruction(Instruction* inst){
             }
             else {
                 dealloc_value(&v);
-                err_print("invalid if statement argument");
+                crash("invalid if statement argument");
             }
             if(!bo){
                 inst_pos++;
@@ -458,10 +460,55 @@ void excecute_instruction(Instruction* inst){
             push_value(a);
             push_value(a);            
             break;
+        case AND:
+            a = pop_value();
+            b = pop_value();
+            res.v_type = INT;
+            if(a.v_type == INT && b.v_type == INT){
+                res.i = a.i && b.i;
+            }
+            else {
+                crash("invalid logical and aruments");
+            }
+            push_value(res);
+            break;
+        case OR:
+            a = pop_value();
+            b = pop_value();
+            res.v_type = INT;
+            if(a.v_type == INT && b.v_type == INT){
+                res.i = a.i || b.i;
+            }
+            else {
+                crash("invalid logical or aruments");
+            }
+            push_value(res);
+            break;
+        case NOT:
+            a = pop_value();
+            res.v_type = INT;
+            if(a.v_type == INT){
+                res.i = !a.i;
+            }
+            else {
+                crash("invalid logical negation arument");
+            }
+            push_value(res);
+            break;
     }
 }
 
 void check_source_ext(char* path){
     if (strspn(path, ".kaka") == 0)
         err_print("the specified file is not a .kaka file");
+}
+
+void crash(const char* fmt, ...){
+    va_list args;
+    va_start(args, fmt);
+    fclose(source_file);
+    dealloc_values();
+    dealloc_inst();
+    free(inst);
+    verr_print(fmt, args);
 }
