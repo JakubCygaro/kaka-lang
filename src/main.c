@@ -213,19 +213,19 @@ void excecute_instruction(Instruction* inst){
             b = pop_value();
             if(a.v_type == INT && b.v_type == INT){
                 res.v_type = INT;
-                res.i = a.i - b.i;
+                res.i = b.i - a.i;
             }
             else if (a.v_type == INT && b.v_type == DOUBLE){
                 res.v_type = DOUBLE;
-                res.d = a.i - b.d;
+                res.d = b.i - a.d;
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
                 res.v_type = DOUBLE;
-                res.d = a.d - b.i;
+                res.d = b.d - a.i;
             }
             else if (a.v_type == DOUBLE && b.v_type == DOUBLE){
                 res.v_type = DOUBLE;
-                res.d = a.d - b.d;
+                res.d = b.d - a.d;
             }
             else 
                 err_print("invalid subtraction operands");
@@ -288,12 +288,18 @@ void excecute_instruction(Instruction* inst){
             push_value(res);
             break;
         case MOD:
+            divisor = pop_value();
             a = pop_value();
-            b = pop_value();
-
-            if(a.v_type == INT && b.v_type == INT){
+            if(divisor.v_type == INT)
+                if(divisor.i == 0)
+                    err_print("zero divisor");
+            if(divisor.v_type == DOUBLE)
+                if(divisor.d == 0)
+                    err_print("zero divisor");
+            
+            if(a.v_type == INT && divisor.v_type == INT){
                 res.v_type = INT;
-                res.i = a.i % b.i;
+                res.i = a.i % divisor.i;
             }
             else 
                 err_print("invalid modulo operands");
