@@ -159,7 +159,7 @@ print
 Labels:
 ```
 push "infinite loop"
-label "start" # create a label with a unique name
+lab "start" # create a label with a unique name
 print
 jmp "start" # jump to a label
 ```
