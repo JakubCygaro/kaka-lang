@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #define EXIT_FAILURE 1
 

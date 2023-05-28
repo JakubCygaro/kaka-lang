@@ -1,8 +1,4 @@
 #include "label.h"
-#include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 LabelMap LabelMap_new(){
     LabelMap map = {

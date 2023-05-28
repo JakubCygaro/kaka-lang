@@ -1,6 +1,5 @@
 #include "errors.h"
-#include <stdarg.h>
-#include <stdio.h>
+
 
 void err_print(const char* fmt, ...){
     va_list args;

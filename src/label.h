@@ -5,6 +5,11 @@
 #include <stdbool.h>
 #include <malloc.h>
 #include <string.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
 
 typedef struct {
     char* key;

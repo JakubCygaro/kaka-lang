@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include "lexer.h"
 #include "errors.h"
+#include <stdio.h>
+
 
 static TokenStream* token_stream;
 static Instruction* instructions;

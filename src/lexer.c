@@ -1,12 +1,6 @@
 #include "lexer.h"
-#include <ctype.h>
-#include <stddef.h>
-#include <stdio.h>
 #include "errors.h"
-#include <stdlib.h>
-#include <string.h>
-#include <memory.h>
-#include <stdbool.h>
+
 
 TokenStream* get_token_stream(FILE* source_file){
     TokenStream* t_stream = calloc(1, sizeof(TokenStream));
@@ -78,9 +72,6 @@ TokenStream* get_token_stream(FILE* source_file){
 
         case '\"':
             token = scan_for_string(source_file, current_c);
-
-            //Value_print(&token.v);
-
             token.line = line;
             add_token(t_stream, token);
             continue;

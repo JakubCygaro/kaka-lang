@@ -1,5 +1,4 @@
 #include "parser.h"
-#include <stdio.h>
 
 
 Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
