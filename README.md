@@ -18,6 +18,12 @@ Just run the `build.bat` script.
 
 Compile all the source files in the `src` directory using `gcc`.
 
+## Running
+
+Run the executable in command line and provide a path to a `.kaka` file as the argument:
+
+`.\kaka.exe .\file.kaka`
+
 ## Data types
 
 Kaka supports 3 variable types:
@@ -52,7 +58,7 @@ Kaka supports 3 variable types:
 
 ## Examples
 
-Basic Arithmetic:
+### Basic Arithmetic:
 ```
 # addition
 push 10
@@ -90,7 +96,7 @@ print
 # 1 is printed
 ```
 
-Logical Operations
+### Logical Operations
 ```
 push 0
 push 1
@@ -111,7 +117,7 @@ pop
 # 1 (true) is printed
 ```
 
-Comparing Values:
+### Comparing Values:
 ```
 # equality
 push 10
@@ -148,7 +154,7 @@ lesseq
 print
 # 1 (true) is printed
 ```
-Casting Values:
+### Casting Values:
 ```
 push 10
 double
@@ -161,7 +167,7 @@ print
 # 1 is printed
 ```
 
-Labels:
+### Labels:
 ```
 push "infinite loop"
 lab "start" # create a label with a unique name
@@ -169,7 +175,7 @@ print
 jmp "start" # jump to a label
 ```
 
-If Statement:
+### If Statement:
 ```
 push "true"
 push 0 # (false)
@@ -180,7 +186,7 @@ print
 # "false" is printed
 ```
 
-\_stack:
+### \_stack:
 ```
 push 1
 push 2
