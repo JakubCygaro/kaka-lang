@@ -85,6 +85,27 @@ print
 # 1 is printed
 ```
 
+Logical Operations
+```
+push 0
+push 1
+and
+print
+# 0 (false) is printed
+
+push 0
+push 1
+or
+print
+# 1 (true) is printed
+
+push 0
+not
+print
+pop
+# 1 (true) is printed
+```
+
 Comparing Values:
 ```
 # equality
