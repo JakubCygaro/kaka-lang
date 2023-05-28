@@ -7,14 +7,17 @@
 #include "errors.h"
 #include "parser.h"
 #include <stdbool.h>
+#include "label.h"
 
 #define MAXSTACK 1000
 
+static Instruction* inst;
+static size_t instruction_amount;
+static size_t inst_pos = 0;
 Value stack[MAXSTACK];
-long int pos;
+long int pos = 0;
 
 void print_stack(){
-    //printf("pos: %ld\n", pos);
     for(long int i = 0; i < pos; i++)
         Value_print(&stack[i]);
 }
@@ -24,14 +27,52 @@ void print_full_stack(){
 }
 
 void push_value(Value v){
-    if (pos >= MAXSTACK)
+    if (pos >= MAXSTACK){
+
         err_print("stack overflowed");
+    }
     stack[pos++] = v;
 }
 Value pop_value(){
-    if (pos < 0)
+    if (pos < 0){
+        //CommandType_print(inst[inst_pos].c_type);
         err_print("empty stack");
+    }
     return stack[--pos];
+}
+
+LabelMap label_map;
+
+void setup_labels(){
+    label_map = LabelMap_new();
+    while(inst_pos < instruction_amount){
+        switch (inst[inst_pos].c_type) {
+            case LABEL:
+                bool out = LabelMap_insert(&label_map, inst[inst_pos].v.string, inst_pos);
+                if(!out)
+                    err_print("redeclaration of label `%s`", inst[inst_pos].v.string);
+            
+            default:
+            ;
+        }
+        inst_pos++;
+    }
+
+    inst_pos = 0;
+    while(inst_pos < instruction_amount){
+        switch (inst[inst_pos].c_type) {
+            case JUMP:
+                size_t ret;
+                bool out = LabelMap_get(&label_map, inst[inst_pos].v.string, &ret);
+                if(!out)
+                    err_print("no such label `%s`", inst[inst_pos].v.string);
+                inst[inst_pos].jump_dest = ret;
+            default:
+            ;
+        }
+        inst_pos++;
+    }
+    inst_pos = 0;
 }
 
 void check_source_ext(char*);
@@ -52,11 +93,13 @@ void dealloc_value(Value* v){
             return;
     free(v->string);
 }
+/// deallocates all values that instructions might contain (char* )
+void dealloc_inst(){
+    for(size_t i = 0; i < instructions_size; i++)
+        dealloc_value(&instructions[i].v);
+}
 
 
-static Instruction* inst;
-static size_t instruction_amount;
-static size_t inst_pos = 0;
 
 int main(int argc, char** args){
 
@@ -72,14 +115,18 @@ int main(int argc, char** args){
     }
     inst = parse_from_file(source_file, &instruction_amount);
 
+
+    setup_labels();
+
     while(inst_pos < instruction_amount){
         excecute_instruction(&inst[inst_pos]);
 
         inst_pos++;
     }
     fclose(source_file);
-    free(inst);
     dealloc_values();
+    dealloc_inst();
+    free(inst);
     return 0;
 }
 void excecute_instruction(Instruction* inst){
@@ -130,10 +177,15 @@ void excecute_instruction(Instruction* inst){
             }
             push_value(res);
             break;
+        case LABEL:
+            break;
+
+        case JUMP:
+            inst_pos = inst->jump_dest - 1;
+            break;
         case ADD:
             Value a = pop_value();
             Value b = pop_value();
-
             if(a.v_type == INT && b.v_type == INT){
                 res.v_type = INT;
                 res.i = a.i + b.i;
@@ -150,8 +202,9 @@ void excecute_instruction(Instruction* inst){
                 res.v_type = DOUBLE;
                 res.d = a.d + b.d;
             }
-            else 
+            else{
                 err_print("invalid addition operands");
+            }
 
             push_value(res);
             break;
@@ -269,7 +322,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid equation operands");
+                err_print("invalid comparison operands");
             
             push_value(res);
             break;
@@ -295,7 +348,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid equation operands");
+                err_print("invalid great operands");
             
             push_value(res);
             break;
@@ -321,7 +374,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid equation operands");
+                err_print("invalid greateq operands");
             
             push_value(res);
             break;
@@ -347,7 +400,7 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid equation operands");
+                err_print("invalid less operands");
             
             push_value(res);
             break;
@@ -373,9 +426,31 @@ void excecute_instruction(Instruction* inst){
                 dealloc_value(&b);
             }
             else 
-                err_print("invalid equation operands");
+                err_print("invalid lesseq operands");
             
             push_value(res);
+            break;
+        case IF:
+            v = pop_value();
+            bool bo;
+            if(v.v_type == INT){
+                bo = v.i == 1;
+            }
+            else if (v.v_type == DOUBLE){
+                bo = v.d == 1;
+            }
+            else {
+                dealloc_value(&v);
+                err_print("invalid if statement argument");
+            }
+            if(!bo){
+                inst_pos++;
+            }
+            break;
+        case CLONE:
+            a = pop_value();
+            push_value(a);
+            push_value(a);            
             break;
     }
 }

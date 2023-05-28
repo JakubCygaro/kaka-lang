@@ -67,6 +67,20 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             none_v.none = NULL;
             i.v = none_v;
             break;
+        case LABEL:
+            i.c_type = LABEL;
+            next_t = TokenStream_gett(token_stream);
+            ensure_token(VALUE, next_t);
+            ensure_value(STRING, &next_t->v);
+            i.v = next_t->v;
+            break;
+        case JUMP:
+            i.c_type = JUMP;
+            next_t = TokenStream_gett(token_stream);
+            ensure_token(VALUE, next_t);
+            ensure_value(STRING, &next_t->v);
+            i.v = next_t->v;
+            break;
         case ADD:
             i.c_type = ADD;
             none_v.v_type = NONE;
@@ -123,6 +137,18 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             break;
         case LESSEQ:
             i.c_type = LESSEQ;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
+        case IF:
+            i.c_type = IF;
+            none_v.v_type = NONE;
+            none_v.none = NULL;
+            i.v = none_v;
+            break;
+        case CLONE:
+            i.c_type = CLONE;
             none_v.v_type = NONE;
             none_v.none = NULL;
             i.v = none_v;

@@ -1,6 +1,8 @@
 #include "types.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void TokenStream_free(TokenStream* self){
     free(self->tokens);
@@ -88,8 +90,84 @@ void CommandType_print(COMMAND_TYPE c_type){
         case PRINT_STACK:
             printf("_stack\n");
             break;
+        case CAST_INT:
+            printf("int\n");
+            break;
+        case CAST_DOUBLE:
+            printf("double\n");
+            break;
+        case LABEL:
+            printf("lab\n");
+            break;
+        case JUMP:
+            printf("jmp\n");
+            break;
         default:
             printf("unhandled command type\n");
             break;
     }
 }
+
+// unsigned long hash(const char *str){
+//     unsigned long hash = 5381;
+//     int c;
+//     while ((c = *str++)){
+//         hash = ((hash << 5) + hash) + c;
+//     }
+//     return hash;
+// }
+
+// unsigned long index_for(unsigned long hash){
+//     return hash % TABLE_SIZE;
+// }
+
+// LabelMap LabelMap_create() {
+//     LabelMap m;
+//     m.nodes = calloc(TABLE_SIZE, sizeof(LabelNode*));
+//     return m;
+// }
+// void LabelMap_free(LabelMap* map){
+//     for (int i = 0; i < TABLE_SIZE; i++){
+//         LabelNode* node = map->nodes[i];
+//         while(node != NULL){
+//             LabelNode next_node = node->
+//         }
+//     }
+// }
+
+// int LabelMap_check(LabelMap* map, LabelNode node){
+//     for (size_t i = 0; i < map->size; i++){
+//         if(strcmp(map->nodes[i]->key, node.key) == 0)
+//             return 1;
+//     }
+//     return 0;
+// }
+// int LabelMap_put(LabelMap* self, char* key, size_t val){
+//     LabelNode n = {
+//         key,
+//         val,
+//     };
+//     if (LabelMap_check(self, n))
+//         return 0;
+//     self->nodes = realloc(self->nodes, (self->size + 1) * sizeof(LabelNode*));
+//     LabelNode* node = calloc(1, sizeof n);
+//     *node = n;
+//     self->nodes[self->size] = node;
+//     return 1;
+// }
+// LabelNode* LabelMap_get(LabelMap* self, char* key, size_t val){
+
+// }
+// void LabelMap_free(LabelMap* map){
+//     for (size_t i = 0; i < map->size; i++){
+//         free(map->nodes[i]->key);
+//         free(map->nodes[i]);
+//     }
+
+// }
+// LabelMap LabelMap_new(){
+//     LabelMap m;
+//     m.nodes = malloc(0);
+//     m.size = 0;
+//     return m;
+// }

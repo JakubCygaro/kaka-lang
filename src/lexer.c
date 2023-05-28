@@ -37,17 +37,17 @@ TokenStream* get_token_stream(FILE* source_file){
         case 'm':
         case 'n':
         case 'o':
-        case 'u':
         case 'p':
         case 'r':
         case 's':
         case 't':
+        case 'u':
         case 'w':
+        case 'v':
         case 'x':
         case 'y':
         case 'z':
         case 'q':
-        case 'v':
         case '_':
             Token token = scan_for_instruction(source_file, current_c);
             token.line = line;
@@ -167,8 +167,16 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
         return CAST_INT;
     else if (strcmp(cmd_str, "double") == 0)
         return CAST_DOUBLE;
+    else if (strcmp(cmd_str, "lab") == 0)
+        return LABEL;
+    else if (strcmp(cmd_str, "jmp") == 0)
+        return JUMP;
+    else if (strcmp(cmd_str, "if") == 0)
+        return IF;
+    else if (strcmp(cmd_str, "clone") == 0)
+        return CLONE;
     else
-        err_print("unrecognized instruction type");
+        err_print("unrecognized instruction type `%s`", cmd_str);
     return PRINT;
 }
 
