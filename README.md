@@ -1,4 +1,6 @@
 # kaka-lang
+___"Kaka is you"___
+
 This is a simple interpreted stack-based programming language written in C.
 
 I wrote this for fun and also to test out what I've learn about C so far, this is by no means a serious project.
@@ -31,6 +33,9 @@ Kaka supports 3 variable types:
 - `mul`: multiply two values
 - `div`: divide two values
 - `mod`: divide two values and push the remainder
+- `and`: logical AND
+- `or`: logical OR
+- `not`: logical NOT
 - `cmp`: compare two values and push the result (1 for equality, 0 for inequality)
 - `great`: compare two values to check which is greater
 - `greateq`: compare two values to chech which is greater or equal
@@ -43,7 +48,7 @@ Kaka supports 3 variable types:
 - `lab`: create a label
 - `jmp`: jump to a label
 - `if`: if the value on the stack is equal to 1, excecute the next command, otherwise skip it, consume the value in the process
-- \_stack: print the stack without consuming any value
+- \_stack: print the stack without consuming any value (from the top to the bottom)
 
 ## Examples
 
@@ -173,6 +178,17 @@ print
 push "false"
 print
 # "false" is printed
+```
+
+\_stack:
+```
+push 1
+push 2
+push 3
+_stack
+# 3
+# 2
+# 1
 ```
 
 
