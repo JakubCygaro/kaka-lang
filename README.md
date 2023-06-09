@@ -1,4 +1,6 @@
 # kaka-lang
+___"Kaka is you"___
+
 This is a simple interpreted stack-based programming language written in C.
 
 I wrote this for fun and also to test out what I've learn about C so far, this is by no means a serious project.
@@ -16,6 +18,12 @@ Just run the `build.bat` script.
 
 Compile all the source files in the `src` directory using `gcc`.
 
+## Running
+
+Run the executable in command line and provide a path to a `.kaka` file as the argument:
+
+`.\kaka.exe .\file.kaka`
+
 ## Data types
 
 Kaka supports 3 variable types:
@@ -31,6 +39,9 @@ Kaka supports 3 variable types:
 - `mul`: multiply two values
 - `div`: divide two values
 - `mod`: divide two values and push the remainder
+- `and`: logical AND
+- `or`: logical OR
+- `not`: logical NOT
 - `cmp`: compare two values and push the result (1 for equality, 0 for inequality)
 - `great`: compare two values to check which is greater
 - `greateq`: compare two values to chech which is greater or equal
@@ -43,11 +54,11 @@ Kaka supports 3 variable types:
 - `lab`: create a label
 - `jmp`: jump to a label
 - `if`: if the value on the stack is equal to 1, excecute the next command, otherwise skip it, consume the value in the process
-- \_stack: print the stack without consuming any value
+- \_stack: print the stack without consuming any value (from the top to the bottom)
 
 ## Examples
 
-Basic Arithmetic:
+### Basic Arithmetic:
 ```
 # addition
 push 10
@@ -85,7 +96,7 @@ print
 # 1 is printed
 ```
 
-Logical Operations
+### Logical Operations
 ```
 push 0
 push 1
@@ -106,7 +117,7 @@ pop
 # 1 (true) is printed
 ```
 
-Comparing Values:
+### Comparing Values:
 ```
 # equality
 push 10
@@ -143,7 +154,7 @@ lesseq
 print
 # 1 (true) is printed
 ```
-Casting Values:
+### Casting Values:
 ```
 push 10
 double
@@ -156,7 +167,7 @@ print
 # 1 is printed
 ```
 
-Labels:
+### Labels:
 ```
 push "infinite loop"
 lab "start" # create a label with a unique name
@@ -164,7 +175,7 @@ print
 jmp "start" # jump to a label
 ```
 
-If Statement:
+### If Statement:
 ```
 push "true"
 push 0 # (false)
@@ -173,6 +184,17 @@ print
 push "false"
 print
 # "false" is printed
+```
+
+### \_stack:
+```
+push 1
+push 2
+push 3
+_stack
+# 3
+# 2
+# 1
 ```
 
 
