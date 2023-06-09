@@ -14,6 +14,7 @@
 #define MAXSTACK 1000
 FILE* source_file;
 
+bool check_ext(const char*, const char*);
 void dealloc_values();
 void dealloc_inst();
 void crash(const char* fmt, ...);
@@ -108,6 +109,8 @@ int main(int argc, char** args){
 
     if (argc != 2)
         err_print("source file path was not provided.");
+
+
     check_source_ext(args[1]);
 
 
@@ -499,7 +502,7 @@ void excecute_instruction(Instruction* inst){
 }
 
 void check_source_ext(char* path){
-    if (strspn(path, ".kaka") == 0)
+    if (!check_ext(path, ".kaka"))
         err_print("the specified file is not a .kaka file");
 }
 
@@ -511,4 +514,16 @@ void crash(const char* fmt, ...){
     dealloc_inst();
     free(inst);
     verr_print(fmt, args);
+}
+
+bool check_ext(const char* path, const char* match){
+    size_t match_l = strlen(match);
+    size_t path_l = strlen(path);
+
+    if(match_l >= path_l)
+        return false;
+    
+    size_t start = path_l - match_l;
+
+    return strcmp(path + start, match) == 0;
 }
