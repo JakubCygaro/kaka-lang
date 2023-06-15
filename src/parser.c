@@ -14,7 +14,14 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
             Instruction i = parse_instruction(t->c_type);
             add_instruction(i);
         continue;
-
+        case VALUE:
+            Instruction implicit_push = {
+                PUSH,
+                t->v,
+                0,
+            };
+            add_instruction(implicit_push);
+        continue;
         default:
             err_print("invalid token, line: %lld", t->line);
         }

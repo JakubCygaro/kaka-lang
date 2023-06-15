@@ -31,6 +31,20 @@ Kaka supports 3 variable types:
 - `double`
 - `string`
 
+## Implicit push (new!)
+
+Values can be pushed without using the `push` keyword, like so:
+
+
+```
+push 4
+4
+_stack
+# 4
+# 4
+# is printed
+```
+
 ## Commands
 - `push`: push a value onto the stack
 - `pop`: remove a value from the stack
