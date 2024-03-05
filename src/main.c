@@ -10,8 +10,10 @@
 #include <stdbool.h>
 #include "label.h"
 #include <vadefs.h>
+#include "stringlist.h"
 
 #define MAXSTACK 1000
+#define STRINGIFY(A) #A
 FILE* source_file;
 
 bool check_ext(const char*, const char*);
@@ -21,6 +23,14 @@ void crash(const char* fmt, ...);
 void check_source_ext(char*);
 void excecute_instruction(Instruction* inst);
 void dealloc_value(Value* v);
+
+#if 1
+void emit_instruction(Instruction* inst, FILE *out);
+void compile();
+
+StringList stringList;
+#endif
+//void setup_data(FILE* out);
 
 static Instruction* inst;
 static size_t instruction_amount;
@@ -105,6 +115,7 @@ void dealloc_inst(){
 }
 
 
+
 int main(int argc, char** args){
 
     if (argc != 2)
@@ -119,18 +130,25 @@ int main(int argc, char** args){
         crash_on_error(error);
     }
     inst = parse_from_file(source_file, &instruction_amount);
-
+    fclose(source_file);
 
     setup_labels();
 
+#ifndef COMPILER
     while(inst_pos < instruction_amount){
         excecute_instruction(&inst[inst_pos]);
 
         inst_pos++;
     }
-    fclose(source_file);
+#else
+    stringList = StringList_new();
+    compile();
+#endif
     dealloc_values();
     dealloc_inst();
+#ifdef COMPILER
+    StringList_free(&stringList);
+#endif
     free(inst);
     return 0;
 }
@@ -526,4 +544,177 @@ bool check_ext(const char* path, const char* match){
     size_t start = path_l - match_l;
 
     return strcmp(path + start, match) == 0;
+}
+
+void write_string_data(StringNode *node, void *data){
+    FILE* out = data;
+    // fprintf(out, 
+    //     "str_%lld db '%s', 0, 10\n"
+    //     "str_%lld.len = $ - str_%lld\n", node->num, node->str, node->num, node->num);
+    // fprintf(out, 
+    //     "str_%lld db '%s', 10, 0\n", node->num, node->str);
+    fprintf(out, 
+        "str_%lld db ", node->num);
+    int c;
+    int i = 0;
+    while(true){
+        c = node->str[i++];
+        if(c == '\0'){
+            fprintf(out, "%x\n", c);
+            break;
+        } else {
+            fprintf(out, "%x,", c);
+        }
+
+    }
+
+
+    fputc('\n', out);
+}
+
+void compile(){
+    FILE* output;
+    fopen_s(&output, "compilation.asm", "w+");
+    if (output == NULL){
+        crash("could not create intermediate .asm file");
+    }
+
+    //format, macros
+    fprintf(output, 
+        "format PE64 console\n"
+        "entry start\n"
+        "macro import [libname] {\n"
+        "forward\n"
+        "   dd 0, 0, 0, RVA NAME__#libname, RVA TABLE__#libname\n"
+        "common\n"
+        "   dd 0, 0, 0, 0, 0\n"
+        "forward\n"
+        "   NAME__#libname db `libname, \".DLL\", 0\n"
+        "}\n"
+        "macro functions libname, [funcname] {\n"
+        "common\n"
+        "   TABLE__#libname:\n"
+        "forward\n"
+        "   funcname dq RVA _#funcname\n"
+        "common\n"
+        "   dq 0\n"
+        "forward\n"
+        "   _#funcname db 0, 0, `funcname, 0\n"
+        "}\n");
+    
+    //import section
+    fprintf(output, 
+        "section '.idata' import data readable writable\n"
+        "import KERNEL32, msvcrt\n"
+        "functions KERNEL32, ExitProcess, GetStdHandle, WriteFile\n"
+        "functions msvcrt, printf\n");
+
+    //code section
+    fprintf(output, 
+        "section '.text' code readable executable\n"
+        "start:\n"
+        "   sub rsp, 8 ; align stack\n"/*
+        "   sub rsp, 4 * 8 ; reserve stack for call\n"
+        "   mov rcx, -11 ; stdout handle\n"
+        "   call [GetStdHandle]\n"
+        "   mov [std_out], rax ; save handle\n"
+        "   add rsp, 4 * 8 ; clean stack\n"*/);
+    
+    while(inst_pos < instruction_amount){
+        //printf(STRINGIFY(instruction_amount) " : %lld\n", instruction_amount);
+        emit_instruction(&inst[inst_pos], output);
+        inst_pos++;
+    }
+
+    fprintf(output, 
+        "   sub rsp, 4 * 8 ; reserve stack for call\n"
+        "   mov rcx, 0\n"
+        "   call [ExitProcess] ; exit \n");
+
+    //data section
+    fprintf(output, 
+        "section '.data' data readable writable\n"
+        //"std_out dq 0 ; STDOUT_HANDLE\n"
+        "fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
+        "; STRING DATA SECTION\n");
+    //string data section
+    StringList_foreach(&stringList, write_string_data, (void*)output);
+
+
+    fclose(output);
+    system("fasm ./compilation.asm");
+}
+
+
+static bool STRING_TOP = false;
+
+void emit_instruction(Instruction* inst, FILE *out){
+    //printf("*inst: %p\n", inst);
+    switch (inst->c_type) {
+        case PUSH: {
+            if(inst->v.v_type == DOUBLE || inst->v.v_type == NONE)
+                crash("compile error: value not supported");
+            if(inst->v.v_type == STRING){
+                char *str = inst->v.string;
+                StringNode node = {
+                    .next = NULL,
+                    .num = inst_pos,
+                    .str = str,
+                };
+                StringList_append(&stringList, node);
+
+                fprintf(out, 
+                    "   push str_%lld ; push str\n", node.num);
+                STRING_TOP = true;
+            } else {
+                fprintf(out, 
+                    "   push %d ; push integer\n", inst->v.i);
+                STRING_TOP = false;
+            }
+        }break;
+        case POP: {
+            fprintf(out, 
+                "   add rsp, 8 ; pop\n");
+        }break;
+        case ADD: {
+            fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   add rax, rcx\n"
+                "   push rax ; add\n");
+        }break;
+        case SUB: {
+            fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   sub rax, rcx\n"
+                "   push rax ; sub\n");
+        }break;
+        case MUL: {
+            fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   imul rax, rcx\n"
+                "   push rax ; mul\n");
+        }break;
+        case PRINT: {
+            if(!STRING_TOP){
+                //crash("compile error: only string printing supported");
+                fprintf(out,
+                    "   mov rcx, fmt_integer ; integer print\n"
+                    "   pop rdx\n"
+                    "   sub rsp, 4 * 8\n"
+                    "   call [printf]\n"
+                    "   add rsp, 4 * 8\n");
+            } else {
+                fprintf(out, 
+                    "   pop rcx ; load string\n"
+                    "   sub rsp, 4*8 ; reserve stack\n"
+                    "   call [printf]\n"
+                    "   add rsp, 4 * 8 ; stack cleanup\n");
+            }
+        }break;
+        default:
+            crash("compile error: instruction not supported");
+    }
 }

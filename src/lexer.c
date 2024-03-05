@@ -1,5 +1,8 @@
 #include "lexer.h"
 #include "errors.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 TokenStream* get_token_stream(FILE* source_file){
@@ -231,25 +234,53 @@ static Token scan_for_number(FILE * source, char first){
     }
 }
 static Token scan_for_string(FILE* source, char first){
-    //first is " at this point
-    //ungetc(first, source);
+    //the first (") is at this point
     long start = ftell(source);
     long end = start;
 
     char c;
-    while((c = getc(source)) != EOF){
-        end++;
-        if(c == '\"')
+    while((c = getc(source))){
+        
+        if (c == '\\') {
+            scan_special_char(source);
+        } else if (c == '\"'){
             break;
+        }
+        end++;
+        if(c == EOF) {
+            fprintf(stderr, "Error: missing parentheses\n");
+            exit(1);
+        }
+        // if(c == '\\'){
+        //     esc = true;
+        // } else {
+        //     end++;
+        // }
+        // if(c == '\"' && !esc){
+        //     break;
+        // }
+        // else if (esc){
+        //     esc = false;
+        //     printf("escaped\n");
+        // }
     }
 
     fseek(source, start, SEEK_SET);
-    long length = end - start - 1;
+    long length = end - start;// - 1;
     char buf[length + 1];
-    fread(buf, sizeof(char), length, source);
-    getc(source);
-    buf[length] = '\0';
     
+    for(size_t i = 0; i < length; i++){
+        c = getc(source);
+        if(c == '\\')
+            c = scan_special_char(source);
+        buf[i] = c;
+    }
+    
+    //fread(buf, sizeof(char), length, source);
+    getc(source); // skip the final (")
+
+    buf[length] = '\0';
+    //printf("buf: %s\n", buf);
     char* string = malloc((length + 1) * sizeof(char));
     strcpy_s(string, (length + 1) * sizeof(char), buf);
     Token t;
@@ -265,4 +296,26 @@ static void add_token(TokenStream* t_stream, Token token){
     t_stream->size++;
     t_stream->tokens = realloc(t_stream->tokens, t_stream->size * sizeof(Token));
     t_stream->tokens[t_stream->size-1] = token;
+}
+
+#define SPECIALC(C) case C : return 
+
+static unsigned char scan_special_char(FILE* source){
+    int c;
+    switch ((c = getc(source))) {
+        case 'n'    : return '\n';
+        case 'r'    : return '\r';
+        case 'b'    : return '\b';
+        case '0'    : return '\0';
+        case 'f'    : return '\f';
+        case 't'    : return '\t';
+        case 'a'    : return '\a';
+        case 'v'    : return '\v';
+        case '\\'   : return '\\';
+        case '?'    : return '\?';
+        case 'e'    : return '\e';
+        case '\''   : return '\'';
+        case '"'    : return '"';
+        default: fprintf(stderr, "unknown escape sequence '\\%c' ", c); exit(1);
+    }
 }

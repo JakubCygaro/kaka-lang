@@ -19,13 +19,13 @@ void TokenStream_ungett(TokenStream* self){
 void Value_print(Value* self){
     switch (self->v_type) {
         case INT:
-            printf("%d\n", self->i);
+            printf("%d", self->i);
             break;
         case DOUBLE:
-            printf("%lf\n", self->d);
+            printf("%lf", self->d);
             break;
         case STRING:
-            printf("%s\n", self->string);
+            printf("%s", self->string);
             break;
         default:
             printf("NULL");
