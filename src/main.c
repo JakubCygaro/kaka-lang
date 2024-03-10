@@ -53,14 +53,10 @@ void push_value(Value v){
 
         crash("stack overflowed");
     }
-    //printf("push\n");
-    //Value_print(&v);
-    //printf("\n");
     stack[pos++] = v;
 }
 Value pop_value(){
     if (pos - 1 < 0){
-        //CommandType_print(inst[inst_pos].c_type);
         crash("empty stack");
     }
     return stack[--pos];
@@ -182,8 +178,6 @@ void excecute_instruction(Instruction* inst){
                 for (int i = argn - 1; i >= 0; i--){
                     push_value(args[i]);
                 }
-                // Value_print(&v);
-                // push_value(v);
             } break;
         case CAST_INT:
             v = pop_value();
@@ -257,7 +251,6 @@ void excecute_instruction(Instruction* inst){
             else if (a.v_type == INT && b.v_type == DOUBLE){
                 res.v_type = DOUBLE;
                 res.d = (double)a.i - b.d;
-                //printf("CHUJ: %d\n", b.i);
             }
             else if (a.v_type == DOUBLE && b.v_type == INT){
                 res.v_type = DOUBLE;
@@ -609,11 +602,6 @@ bool check_ext(const char* path, const char* match){
 
 void write_string_data(StringNode *node, void *data){
     FILE* out = data;
-    // fprintf(out, 
-    //     "str_%lld db '%s', 0, 10\n"
-    //     "str_%lld.len = $ - str_%lld\n", node->num, node->str, node->num, node->num);
-    // fprintf(out, 
-    //     "str_%lld db '%s', 10, 0\n", node->num, node->str);
     fprintf(out, 
         "str_%lld db ", node->num);
     int c;
@@ -672,15 +660,9 @@ void compile(){
     fprintf(output, 
         "section '.text' code readable executable\n"
         "start:\n"
-        "   sub rsp, 8 ; align stack\n"/*
-        "   sub rsp, 4 * 8 ; reserve stack for call\n"
-        "   mov rcx, -11 ; stdout handle\n"
-        "   call [GetStdHandle]\n"
-        "   mov [std_out], rax ; save handle\n"
-        "   add rsp, 4 * 8 ; clean stack\n"*/);
+        "   sub rsp, 8 ; align stack\n");
     
     while(inst_pos < instruction_amount){
-        //printf(STRINGIFY(instruction_amount) " : %lld\n", instruction_amount);
         emit_instruction(&inst[inst_pos], output);
         inst_pos++;
     }
@@ -693,7 +675,6 @@ void compile(){
     //data section
     fprintf(output, 
         "section '.data' data readable writable\n"
-        //"std_out dq 0 ; STDOUT_HANDLE\n"
         "fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
         "; STRING DATA SECTION\n");
     //string data section
@@ -708,7 +689,6 @@ void compile(){
 static bool STRING_TOP = false;
 
 void emit_instruction(Instruction* inst, FILE *out){
-    //printf("*inst: %p\n", inst);
     switch (inst->c_type) {
         case PUSH: {
             if(inst->v.v_type == NONE)
