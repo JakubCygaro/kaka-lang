@@ -10,7 +10,7 @@ void err_print(const char* fmt, ...){
     exit(EXIT_FAILURE);
 }
 void verr_print(const char* fmt, va_list args){
-    printf("Error: ");
+    printf("\nError: ");
     vfprintf(stderr, fmt, args);
     va_end(args);
     exit(EXIT_FAILURE);

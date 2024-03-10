@@ -85,7 +85,15 @@ TokenStream* get_token_stream(FILE* source_file){
                 if(skipped == '\n')
                     break;
             }
+            continue;
 
+        case ';':
+            Token empty = {
+                .t_type = EMPTY,
+            };
+            empty.v.v_type = NONE;
+            empty.v.none = NULL;
+            add_token(t_stream, empty);
             continue;
 
         default:

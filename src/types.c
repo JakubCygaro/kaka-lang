@@ -42,6 +42,9 @@ void Token_print(Token* self){
             printf("Value: ");
             Value_print(&self->v);
             break;
+        case EMPTY:
+            printf("<EMPTY>");
+            break;
     }
 }
 void CommandType_print(COMMAND_TYPE c_type){

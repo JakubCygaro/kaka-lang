@@ -22,6 +22,8 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
             };
             add_instruction(implicit_push);
         continue;
+        case EMPTY:
+            continue;
         default:
             err_print("invalid token, line: %lld", t->line);
         }
@@ -32,155 +34,226 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
 }
 
 static Instruction parse_instruction(COMMAND_TYPE c_type){
-    Instruction i;
+    Instruction ins;
     Token* next_t;
     switch (c_type) {
         case PUSH:
-            i.c_type = PUSH;
+            ins.c_type = PUSH;
             next_t = TokenStream_gett(token_stream);
             ensure_token(VALUE, next_t);
             ensure_value_not(NONE, &next_t->v);
-            i.v = next_t->v;
+            ins.v = next_t->v;
             break;
         case POP:
-            i.c_type = POP;
+            ins.c_type = POP;
             Value none_v;
             none_v.v_type = NONE;
             none_v.none = NULL;
-            i.v = none_v;
+            ins.v = none_v;
             break;
         case PRINT:
-            i.c_type = PRINT;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
+            ins.c_type = PRINT;
+            next_t = TokenStream_gett(token_stream);
+            if(next_t != NULL){
+                if(next_t->t_type == VALUE){
+                    if(next_t->v.v_type == INT){
+                        ins.v.v_type = INT;
+                        ins.v.i = next_t->v.i;
+                        break;
+                    }
+                }
+                TokenStream_ungett(token_stream);
+            }
+            none_v.v_type = INT;
+            none_v.i = 0;
+            ins.v = none_v;
             break;
         case PRINT_STACK:
-            i.c_type = PRINT_STACK;
+            ins.c_type = PRINT_STACK;
             none_v.v_type = NONE;
             none_v.none = NULL;
-            i.v = none_v;
+            ins.v = none_v;
             break;
         case CAST_INT:
-            i.c_type = CAST_INT;
+            ins.c_type = CAST_INT;
             none_v.v_type = NONE;
             none_v.none = NULL;
-            i.v = none_v;
+            ins.v = none_v;
             break;
         case CAST_DOUBLE:
-            i.c_type = CAST_DOUBLE;
+            ins.c_type = CAST_DOUBLE;
             none_v.v_type = NONE;
             none_v.none = NULL;
-            i.v = none_v;
+            ins.v = none_v;
             break;
         case LABEL:
-            i.c_type = LABEL;
+            ins.c_type = LABEL;
             next_t = TokenStream_gett(token_stream);
             ensure_token(VALUE, next_t);
             ensure_value(STRING, &next_t->v);
-            i.v = next_t->v;
+            ins.v = next_t->v;
             break;
         case JUMP:
-            i.c_type = JUMP;
+            ins.c_type = JUMP;
             next_t = TokenStream_gett(token_stream);
             ensure_token(VALUE, next_t);
             ensure_value(STRING, &next_t->v);
-            i.v = next_t->v;
+            ins.v = next_t->v;
             break;
-        case ADD:
-            i.c_type = ADD;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case SUB:
-            i.c_type = SUB;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case MUL:
-            i.c_type = MUL;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case DIV:
-            i.c_type = DIV;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case MOD:
-            i.c_type = MOD;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case CMP:
-            i.c_type = CMP;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case GREAT:
-            i.c_type = GREAT;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case GREATEQ:
-            i.c_type = GREATEQ;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case LESS:
-            i.c_type = LESS;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case LESSEQ:
-            i.c_type = LESSEQ;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case IF:
-            i.c_type = IF;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case CLONE:
-            i.c_type = CLONE;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case AND:
-            i.c_type = AND;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case OR:
-            i.c_type = OR;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
-        case NOT:
-            i.c_type = NOT;
-            none_v.v_type = NONE;
-            none_v.none = NULL;
-            i.v = none_v;
-            break;
+        case ADD:{
+                ins.c_type = ADD;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = INT;
+                // none_v.i = get_type_params();
+                ins.v = v;
+            }break;
+        case SUB:{
+                ins.c_type = SUB;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case MUL:{
+                ins.c_type = MUL;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case DIV:{
+                ins.c_type = DIV;
+                Value v = {
+                        .v_type = INT,
+                        .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case MOD:{
+                ins.c_type = MOD;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case CMP:{
+                ins.c_type = CMP;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case GREAT:{
+                ins.c_type = GREAT;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case GREATEQ:{
+                ins.c_type = GREATEQ;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case LESS:{
+                ins.c_type = LESS;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case LESSEQ:{
+                ins.c_type = LESSEQ;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case IF:{
+                ins.c_type = IF;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case CLONE:{
+                ins.c_type = CLONE;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case AND:{
+                ins.c_type = AND;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case OR:{
+                ins.c_type = OR;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
+        case NOT:{
+                ins.c_type = NOT;
+                Value v = {
+                    .v_type = INT,
+                    .i = get_type_params(),
+                };
+                // none_v.v_type = NONE;
+                // none_v.none = NULL;
+                ins.v = v;
+            }break;
         default:
             err_print("command WIP");
     }
-    return i;
+    return ins;
 }
 static void add_instruction(Instruction i){
     instructions = realloc(instructions, sizeof i * ++instructions_size);
@@ -199,4 +272,39 @@ static void ensure_value(VALUE_TYPE type, Value* v){
 static void ensure_value_not(VALUE_TYPE type, Value* v){
     if (v->v_type == type)
         err_print("improper value");
+}
+static int get_type_params(){
+    int ret = PARAM_NONE;
+    Token *t = TokenStream_gett(token_stream);
+    if(t == NULL)
+        return ret;
+    if(t->t_type != COMMAND){
+        TokenStream_ungett(token_stream);
+        return ret;
+    }
+
+    if(t->c_type == CAST_INT)
+        ret = PARAM_1_INT;
+    else if(t->c_type == CAST_DOUBLE) {
+        ret = PARAM_1_DOUBLE;
+    }
+    else {
+        TokenStream_ungett(token_stream);
+        return ret;
+    }
+
+    t = TokenStream_gett(token_stream);
+    if(t == NULL)
+        return ret;
+
+    if(t->c_type == CAST_INT)
+        ret |= PARAM_2_INT;
+    else if(t->c_type == CAST_DOUBLE) {
+        ret |= PARAM_2_DOUBLE;
+    }
+    else {
+        TokenStream_ungett(token_stream);
+        return ret;
+    }
+    return ret;
 }

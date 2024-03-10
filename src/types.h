@@ -9,6 +9,7 @@
 typedef enum {
     VALUE,
     COMMAND,
+    EMPTY
 } TOKEN_TYPE;
 typedef enum {
     INT,
