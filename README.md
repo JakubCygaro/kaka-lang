@@ -145,7 +145,7 @@ push 100
 push 10
 great
 print
-# 1 (true) is printed
+# 0 (false) is printed
 
 # greater or equal to
 push 10
@@ -159,7 +159,7 @@ push 10
 push 100
 less
 print
-# 1 (true) is printed
+# 0 (false) is printed
 
 # less or equal to
 push 10

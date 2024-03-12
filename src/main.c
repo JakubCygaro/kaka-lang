@@ -12,7 +12,7 @@
 #include <vadefs.h>
 #include "stringlist.h"
 
-#define MAXSTACK 1000
+#define MAXSTACK 10000
 #define STRINGIFY(A) #A
 FILE* source_file;
 
@@ -335,7 +335,7 @@ void excecute_instruction(Instruction* inst){
                 res.i = a.i % divisor.i;
             }
             else 
-                crash("invalid modulo operands");
+                crash("invalid modulo operand types (must be two integers)");
             
             push_value(res);
             break;
@@ -366,8 +366,8 @@ void excecute_instruction(Instruction* inst){
             push_value(res);
             break;
         case GREAT:
-            b = pop_value();
             a = pop_value();
+            b = pop_value();
             res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
                 res.i = a.i > b.i;
@@ -392,8 +392,8 @@ void excecute_instruction(Instruction* inst){
             push_value(res);
             break;
         case GREATEQ:
-            b = pop_value();
             a = pop_value();
+            b = pop_value();
             res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
                 res.i = a.i >= b.i;
@@ -418,8 +418,8 @@ void excecute_instruction(Instruction* inst){
             push_value(res);
             break;
         case LESS:
-            b = pop_value();
             a = pop_value();
+            b = pop_value();
             res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
                 res.i = a.i < b.i;
@@ -444,8 +444,8 @@ void excecute_instruction(Instruction* inst){
             push_value(res);
             break;
         case LESSEQ:
-            b = pop_value();
             a = pop_value();
+            b = pop_value();
             res.v_type = INT;
             if(a.v_type == INT && b.v_type == INT){
                 res.i = a.i <= b.i;
@@ -499,7 +499,7 @@ void excecute_instruction(Instruction* inst){
                 res.i = a.i && b.i;
             }
             else {
-                crash("invalid logical and aruments");
+                crash("invalid logical and aruments (%lld:%lld)", inst->line, inst->col);
             }
             push_value(res);
             break;
@@ -526,6 +526,15 @@ void excecute_instruction(Instruction* inst){
             }
             push_value(res);
             break;
+        case ASSERT: {
+            a = pop_value();
+            if(a.v_type != INT){
+                crash("Assertion failed: value not of type int (%lld:%lld)", inst->line, inst->col);
+            }
+            if(!a.i){
+                crash("Assertion failed: \"%s\" (%lld:%lld)", inst->v.string, inst->line, inst->col);
+            }
+        }break;
     }
 }
 
@@ -790,66 +799,82 @@ void emit_instruction(Instruction* inst, FILE *out){
                 crash("cannot compile " STRINGIFY(SUB) " instruction");
             }
         }break;
-        case MUL: {
-            fprintf(out, 
-                "   pop rax\n"
-                "   pop rcx\n"
-                "   imul rax, rcx\n"
-                "   push rax ; mul\n");
+        case MUL: 
+            params = inst->v.i;
+        {
+            if(params == PARAM_1_INT){
+                fprintf(out, 
+                    "   pop rax\n"
+                    "   pop rcx\n"
+                    "   imul rax, rcx\n"
+                    "   push rax ; mul\n");
+            }
+            else if(params == PARAM_1_DOUBLE){
+                fprintf(out, 
+                    "   fld qword [rsp]; load first double from stack\n"
+                    "   add rsp, 8\n"
+                    "   fld qword [rsp] ; load second double from stack\n"
+                    "   fmulp ; mul st0 and st1 and pop the FPU stack\n"
+                    "   fstp qword [rsp] ; mul doubles\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
+                fprintf(out, 
+                    "   fild qword [rsp] ; load signed integer\n"
+                    "   add rsp, 8 ; pop from stack\n"
+                    "   fld qword [rsp] ; load 64 bit float from stack\n"
+                    "   fmulp ; mul and pop FPU\n"
+                    "   fstp qword [rsp] ; store onto stack and pop FPU\n");
+            } else if (params == (PARAM_1_DOUBLE | PARAM_2_INT)){
+                fprintf(out, 
+                    "   fld qword [rsp] ; load 64 bit float from stack\n"
+                    "   add rsp, 8 ; pop from stack\n"
+                    "   fild qword [rsp] ; load signed integer\n"
+                    "   fmulp ; mul and pop FPU\n"
+                    "   fstp qword [rsp] ; store onto stack and pop FPU\n");
+            } else {
+                crash("cannot compile " STRINGIFY(MUL) " instruction");
+            }
         }break;
-        case DIV: {
-            fprintf(out, 
-                "   pop rax\n"
-                "   pop rcx\n"
-                "   idiv rax, rcx\n"
-                "   push rax ; mul\n");
+        case DIV: 
+            params = inst->v.i;
+        {
+            if(params == PARAM_1_INT){
+                fprintf(out, 
+                    "   pop rax\n"
+                    "   pop rcx\n"
+                    "   idiv rax, rcx\n"
+                    "   push rax ; div\n");
+            }
+            else if(params == PARAM_1_DOUBLE){
+                fprintf(out, 
+                    "   fld qword [rsp]; load first double from stack\n"
+                    "   add rsp, 8\n"
+                    "   fld qword [rsp] ; load second double from stack\n"
+                    "   fdivp ; div st0 by st1 and pop the FPU stack\n"
+                    "   fstp qword [rsp] ; div doubles\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
+                fprintf(out, 
+                    "   fild qword [rsp] ; load signed integer\n"
+                    "   add rsp, 8 ; pop from stack\n"
+                    "   fld qword [rsp] ; load 64 bit float from stack\n"
+                    "   fdivp ; div and pop FPU\n"
+                    "   fstp qword [rsp] ; store onto stack and pop FPU\n");
+            } else if (params == (PARAM_1_DOUBLE | PARAM_2_INT)){
+                fprintf(out, 
+                    "   fld qword [rsp] ; load 64 bit float from stack\n"
+                    "   add rsp, 8 ; pop from stack\n"
+                    "   fild qword [rsp] ; load signed integer\n"
+                    "   fdivp ; div and pop FPU\n"
+                    "   fstp qword [rsp] ; store onto stack and pop FPU\n");
+            } else {
+                crash("cannot compile " STRINGIFY(MUL) " instruction");
+            }
         }
         case PRINT: {
             int argn = inst->v.i;
             emit_print(argn, out);
             break;
-            if(argn == 0){
-                fprintf(out, 
-                "   pop rcx ; load string\n");
-            }
-            else if(argn == 1){
-                fprintf(out, 
-                "   pop rcx ; load string\n"
-                "   pop rdx ; load first arg\n");
-            }
-            else if(argn == 2){
-                fprintf(out, 
-                "   pop rcx ; load string\n"
-                "   pop rdx ; load first arg\n"
-                "   pop r8 ; load second arg\n");
-            }
-            else if(argn == 3){
-                fprintf(out, 
-                "   pop rcx ; load string\n"
-                "   pop rdx ; load first arg\n"
-                "   pop r8 ; load second arg\n"
-                "   pop r9 ; load third arg\n");
-            } else {
-                fprintf(out, 
-                "   pop rcx ; load string\n"
-                "   pop rdx ; load first arg\n"
-                "   pop r8 ; load second arg\n"
-                "   pop r9 ; load third arg\n"
-                "   mov rax, rsp\n"
-                );
-
-                for (int left = argn - 3; left > 0; left--){
-                    fprintf(out, 
-                    "   lea r10, [%d * 8 + rax]\n"
-                    "   push [r10]\n ; copy nth argument"
-                    , left);
-                }
-            }
-            fprintf(out, 
-            "   sub rsp, 4 * 8 ; reserve stack\n"
-            "   call [printf]\n"
-            "   add rsp, %d * 8\n",
-            argn);
         }break;
         default:
             crash("compile error: instruction not supported");
@@ -864,59 +889,110 @@ void emit_print(int argn, FILE* out){
             "   call [printf]\n"
             "   add rsp, 4 * 8 ; cleanup stack\n");
     } else if (argn == 1) {
+        // fprintf(out, 
+        // "   pop rcx ; fmt string\n"
+        //     "   mov rax, rsp ; save rsp to rax for later use\n"
+        //     "   sub rsp, 8 ; reserve space for fmt\n"
+        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
+        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
+        //     "   sub rsp, 2 * 8 ; reserve remaining space\n"
+        //     "   call [printf]\n"
+        //     "   add rsp, 4 * 8\n");
+
         fprintf(out, 
-        "   pop rcx ; fmt string\n"
-            "   mov rax, rsp ; save rsp to rax for later use\n"
-            "   sub rsp, 8 ; reserve space for fmt\n"
-            "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-            "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-            "   sub rsp, 2 * 8 ; reserve remaining space\n"
+        "   mov rax, rsp ; save rsp\n"
+            "   sub rsp, 2 * 8 ; reserve space for last 2 empty args\n"
+            "   push qword [rax + 1 * 8]; push arg 2\n"
+            "   mov rdx, [rsp] ; load arg 2\n"
+            "   push qword [rax] ; push arg 1\n"
+            "   mov rcx, [rsp] ; load arg 1\n"
             "   call [printf]\n"
-            "   add rsp, 4 * 8\n");
+            "   add rsp, 5 * 8 ; cleanup stack including original fmt\n");
     } else if (argn == 2) {
+        // fprintf(out, 
+        // "   pop rcx ; fmt string\n"
+        //     "   mov rax, rsp ; save rsp to rax for later use\n"
+        //     "   sub rsp, 8 ; reserve space for fmt\n"
+        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
+        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
+        //     "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
+        //     "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
+        //     "   sub rsp, 1 * 8 ; reserve remaining space\n"
+        //     "   call [printf]\n"
+        //     "   add rsp, 4 * 8\n");
+
         fprintf(out, 
-        "   pop rcx ; fmt string\n"
-            "   mov rax, rsp ; save rsp to rax for later use\n"
-            "   sub rsp, 8 ; reserve space for fmt\n"
-            "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-            "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-            "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
-            "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
-            "   sub rsp, 1 * 8 ; reserve remaining space\n"
+        "   mov rax, rsp ; save rsp\n"
+            "   sub rsp, 8 ; reserve stack for 4th empty argument\n"
+            "   push qword [rax + 2 * 8] ; push arg 3\n"
+            "   mov r8, [rsp] ; move arg 3\n"
+            "   push qword [rax + 1 * 8] ; push arg 2\n"
+            "   mov rdx, [rsp] ; move arg 2\n"
+            "   push qword [rax] ; push arg 1\n"
+            "   mov rcx, [rsp] ; move arg 1\n"
             "   call [printf]\n"
-            "   add rsp, 4 * 8\n");
+            "   add rsp, 5 * 8 ; cleanup stack including original fmt\n");
     } else if (argn == 3) {
+        // fprintf(out, 
+        // "   pop rcx ; fmt string\n"
+        //     "   mov rax, rsp ; save rsp to rax for later use\n"
+        //     "   sub rsp, 8 ; reserve space for fmt\n"
+        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
+        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
+        //     "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
+        //     "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
+        //     "   push qword [rax + 2 * 8] ; copy arg 3 to stack\n"
+        //     "   mov r9, [rsp] ; move value on the stack into r9 for call\n"
+        //     "   call [printf]\n"
+        //     "   add rsp, 4 * 8\n");
         fprintf(out, 
-        "   pop rcx ; fmt string\n"
-            "   mov rax, rsp ; save rsp to rax for later use\n"
-            "   sub rsp, 8 ; reserve space for fmt\n"
-            "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-            "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-            "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
-            "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
-            "   push qword [rax + 2 * 8] ; copy arg 3 to stack\n"
-            "   mov r9, [rsp] ; move value on the stack into r9 for call\n"
+        "   mov rax, rsp ; save rsp\n"
+            "   push qword [rax + 3 * 8] ; push arg 4\n"
+            "   mov r9, [rsp] ; load arg 4\n"
+            "   push qword [rax + 2 * 8] ; push arg 3\n"
+            "   mov r8, [rsp] ; load arg 3\n"
+            "   push qword [rax + 1 * 8] ; push arg 2\n"
+            "   mov rdx, [rsp] ; load arg 2\n"
+            "   push qword [rax] ; push arg 1\n"
+            "   mov rcx, [rsp] ; load arg 1\n"
             "   call [printf]\n"
-            "   add rsp, 4 * 8\n");
+            "   add rsp, 5 * 8 ; cleanup stack inluding original fmt\n");
     } else {
-        fprintf(out, 
-        "   pop rcx ; fmt string\n"
-            "   mov rax, rsp ; save rsp to rax for later use\n"
-            "   sub rsp, 8 ; reserve space for fmt\n"
-            "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-            "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-            "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
-            "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
-            "   push qword [rax + 2 * 8] ; copy arg 3 to stack\n"
-            "   mov r9, [rsp] ; move value on the stack into r9 for call\n"
-            "   ; now pushing remaining args\n");
+        // fprintf(out, 
+        // "   pop rcx ; fmt string\n"
+        //     "   mov rax, rsp ; save rsp to rax for later use\n"
+        //     "   sub rsp, 8 ; reserve space for fmt\n"
+        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
+        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
+        //     "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
+        //     "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
+        //     "   push qword [rax + 2 * 8] ; copy arg 3 to stack\n"
+        //     "   mov r9, [rsp] ; move value on the stack into r9 for call\n"
+        //     "   ; now pushing remaining args\n");
         
-        for(int i = 3; i < argn; i++){
+        // for(int i = 3; i < argn; i++){
+        //     fprintf(out, 
+        //         "   push qword [rax + %d * 8]\n", i);
+        // }
+        // fprintf(out, 
+        //     "   call [printf]\n"
+        //     "   add rsp, %d * 8\n", argn + 1);
+        fprintf(out, "   mov rax, rsp ; save rsp\n");
+        for (int i = argn; i > 3; i--) {
             fprintf(out, 
-                "   push qword [rax + %d * 8]\n", i);
+            "   push qword [rax + %d * 8] ; push %dth arg\n", i, i);
         }
         fprintf(out, 
+            "   push qword [rax + 3 * 8] ; push arg 4\n"
+            "   mov r9, [rsp] ; load arg 4\n"
+            "   push qword [rax + 2 * 8] ; push arg 3\n"
+            "   mov r8, [rsp] ; load arg 3\n"
+            "   push qword [rax + 1 * 8]; push arg 2\n"
+            "   mov rdx, [rsp] ; load arg 2\n"
+            "   push qword [rax] ; push arg 1\n"
+            "   mov rcx, [rsp] ; load arg 1\n"
             "   call [printf]\n"
-            "   add rsp, %d * 8\n", argn + 1);
+            "   add rsp, %d * 8 ; cleanup stack including original fmt\n", argn + 2);
+            
     }
 }

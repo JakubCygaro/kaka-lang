@@ -1,4 +1,5 @@
 #include "errors.h"
+#include <stdio.h>
 
 
 void err_print(const char* fmt, ...){
@@ -12,6 +13,7 @@ void err_print(const char* fmt, ...){
 void verr_print(const char* fmt, va_list args){
     printf("\nError: ");
     vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
     va_end(args);
     exit(EXIT_FAILURE);
 }

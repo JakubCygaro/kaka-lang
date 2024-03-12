@@ -55,17 +55,21 @@ typedef enum {
     AND,
     OR,
     NOT,
+    ASSERT
 } COMMAND_TYPE;
 
 typedef struct {
     COMMAND_TYPE c_type;
     Value v;
+    size_t line;
+    size_t col;
     size_t jump_dest;
 } Instruction;
 
 typedef struct {
     TOKEN_TYPE t_type;
     size_t line;
+    size_t col;
     union value {
         Value v;
         COMMAND_TYPE c_type;

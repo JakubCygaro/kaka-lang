@@ -12,6 +12,8 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
         switch (t->t_type) {
         case COMMAND:
             Instruction i = parse_instruction(t->c_type);
+            i.line = t->line;
+            i.col = t->col;
             add_instruction(i);
         continue;
         case VALUE:
@@ -20,12 +22,14 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
                 t->v,
                 0,
             };
+            i.line = t->line;
+            i.col = t->col;
             add_instruction(implicit_push);
         continue;
         case EMPTY:
             continue;
         default:
-            err_print("invalid token, line: %lld", t->line);
+            err_print("invalid token, (%lld:%lld)", t->line, t->col);
         }
     }
     TokenStream_free(token_stream);
@@ -250,6 +254,17 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
                 // none_v.none = NULL;
                 ins.v = v;
             }break;
+        case ASSERT: {
+                ins.c_type = ASSERT;
+                Token *t = TokenStream_gett(token_stream);
+                ensure_token(VALUE, t);
+                ensure_value(STRING, &t->v);
+                Value msg = {
+                    .v_type = STRING,
+                    .string = t->v.string
+                };
+                ins.v = msg;
+        }break;
         default:
             err_print("command WIP");
     }

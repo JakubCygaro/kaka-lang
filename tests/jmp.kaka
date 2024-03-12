@@ -1,0 +1,20 @@
+#jmp and control flow tests
+lab "start"
+jmp "almost-end"
+
+lab "middle"
+jmp "end"
+
+lab "almost-end"
+jmp "middle"
+
+lab "end"
+
+"this should not print\n"
+0 if
+print ;
+pop
+"this should print\n" clone print ;
+
+4 2 less if 
+print ;

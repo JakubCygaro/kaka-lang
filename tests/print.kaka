@@ -1,0 +1,18 @@
+#print test
+"this should print" "%s\n" print 1
+"%s\n" print 1
+
+6 5 4 3 2 1 
+"%d \n" print 1
+"%d %d \n" print 2
+"%d %d %d \n" print 3
+"%d %d %d %d \n" print 4
+"%d %d %d %d %d \n" print 5
+"%d %d %d %d %d %d \n" print 6
+6.0 5.0 4.0 3.0 2.0 1.0
+"%f \n" print 1
+"%f %f \n" print 2
+"%f %f %f \n" print 3
+"%f %f %f %f \n" print 4
+"%f %f %f %f %f \n" print 5
+"%f %f %f %f %f %f \n" print 6

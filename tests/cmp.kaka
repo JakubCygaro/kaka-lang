@@ -1,0 +1,21 @@
+#cmp test
+100 100 cmp assert "Logical CMP 1 failed"
+102 100 cmp not assert "Logical CMP 1 failed"
+
+#great test
+10 100 great assert "Logical GREAT 1 failed"
+100 10 great not assert "Logical GREAT 2 failed"
+
+#greateq test
+100 100 greateq assert "Logical GREATEQ 1 failed"
+100 101 greateq assert "Logical GREATEQ 2 failed"
+101 100 greateq not assert "Logical GREATEQ 3 failed"
+
+#less test
+100 10 less assert "Logical LESS 1 failed"
+10 100 less not assert "Logical LESS 2 failed"
+
+#greateq test
+100 100 lesseq assert "Logical LESSEQ 1 failed"
+100 99 lesseq assert "Logical LESSEQ 2 failed"
+100 101 lesseq not assert "Logical LESSEQ 3 failed"

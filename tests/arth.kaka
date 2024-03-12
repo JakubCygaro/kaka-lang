@@ -1,0 +1,24 @@
+#int int
+2 2 add int 4 cmp assert "INT INT Addition failed"
+2 2 sub int 0 cmp assert "INT INT Subtraction failed"
+2 2 mul int 4 cmp assert "INT INT Multiplication failed"
+2 2 div int 1 cmp assert "INT INT Division failed"
+2 2 mod int 0 cmp assert "INT INT Division failed"
+
+#double double
+2.0 2.0 add double 4.0 cmp assert "DOUBLE DOUBLE Addition failed"
+2.0 2.0 sub double 0.0 cmp assert "DOUBLE DOUBLE Subtraction failed"
+2.0 2.0 mul double 4.0 cmp assert "DOUBLE DOUBLE Multiplication failed"
+2.0 2.0 div double 1.0 cmp assert "DOUBLE DOUBLE Division failed"
+
+#int double
+2.0 2 add int double 4.0 cmp assert "INT DOUBLE Addition failed"
+2.0 2 sub int double 0.0 cmp assert "INT DOUBLE Subtraction failed"
+2.0 2 mul int double 4.0 cmp assert "INT DOUBLE Multiplication failed"
+2.0 2 div int double 1.0 cmp assert "INT DOUBLE Division failed"
+
+#double int
+2 2.0 add double int 4.0 cmp assert "DOUBLE INT Addition failed"
+2 2.0 sub double int 0.0 cmp assert "DOUBLE INT Subtraction failed"
+2 2.0 mul double int 4.0 cmp assert "DOUBLE INT Multiplication failed"
+2 2.0 div double int 1.0 cmp assert "DOUBLE INT Division failed"

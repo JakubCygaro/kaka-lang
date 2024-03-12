@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static size_t line;
+static size_t column;
 
 TokenStream* get_token_stream(FILE* source_file){
     TokenStream* t_stream = calloc(1, sizeof(TokenStream));
@@ -11,10 +13,12 @@ TokenStream* get_token_stream(FILE* source_file){
     t_stream->tokens = calloc(0, sizeof(Token));
     t_stream->position = 0;
     
-    size_t line = 1;
+    line = 1;
+    column = 0;
+    
     char current_c;
     while((current_c = getc(source_file)) != EOF){
-
+        column++;
         //printf("%c\n", current_c);
 
         switch (current_c) {
@@ -48,11 +52,13 @@ TokenStream* get_token_stream(FILE* source_file){
         case '_':
             Token token = scan_for_instruction(source_file, current_c);
             token.line = line;
+            token.col = column;
             add_token(t_stream, token);
             continue;
 
         case '\n':
             line++;
+            column = 0;
         case ' ':
         case '\t':
             continue;
@@ -70,12 +76,14 @@ TokenStream* get_token_stream(FILE* source_file){
         case '0':
             token = scan_for_number(source_file, current_c);
             token.line = line;
+            token.col = column;
             add_token(t_stream, token);
         continue;
 
         case '\"':
             token = scan_for_string(source_file, current_c);
             token.line = line;
+            token.col = column;
             add_token(t_stream, token);
             continue;
         
@@ -93,6 +101,8 @@ TokenStream* get_token_stream(FILE* source_file){
             };
             empty.v.v_type = NONE;
             empty.v.none = NULL;
+            empty.line = line;
+            empty.col = column;
             add_token(t_stream, empty);
             continue;
 
@@ -109,10 +119,12 @@ TokenStream* get_token_stream(FILE* source_file){
 }
 static Token scan_for_instruction(FILE* source, char first){
     ungetc(first, source);
+    column--;
     long start = ftell(source);
     long end = start;
     char c;
     while((c = getc(source)) != EOF){
+        column++;
         if(c == ' ' || c == '\n' || c == '\t')
             break;
         else if (isdigit(c))
@@ -183,6 +195,8 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
         return OR;
     else if (strcmp(cmd_str, "not") == 0)
         return NOT;
+    else if (strcmp(cmd_str, "assert") == 0)
+        return ASSERT;
     else
         err_print("unrecognized instruction type `%s`", cmd_str);
     return PRINT;
@@ -190,6 +204,7 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
 
 static Token scan_for_number(FILE * source, char first){
     ungetc(first, source);
+    column--;
     long start = ftell(source);
     long end = start;
     char c;
@@ -197,6 +212,7 @@ static Token scan_for_number(FILE * source, char first){
     bool dot = false;
     
     while((c = getc(source)) != EOF){
+        column++;
         if(c == ' ' || c == '\n' || c == '\t')
             break;
         else if (c == '-' && !minus){
@@ -248,7 +264,10 @@ static Token scan_for_string(FILE* source, char first){
 
     char c;
     while((c = getc(source))){
-        
+        column++;
+        if(c == '\n')
+            fprintf(stderr, "Error: no multiline string support (%lld:%lld)\n", 
+                line, column);
         if (c == '\\') {
             scan_special_char(source);
         } else if (c == '\"'){
@@ -256,21 +275,10 @@ static Token scan_for_string(FILE* source, char first){
         }
         end++;
         if(c == EOF) {
-            fprintf(stderr, "Error: missing parentheses\n");
+            fprintf(stderr, "Error: missing parentheses (%lld:%lld)\n", 
+                line, column);
             exit(1);
         }
-        // if(c == '\\'){
-        //     esc = true;
-        // } else {
-        //     end++;
-        // }
-        // if(c == '\"' && !esc){
-        //     break;
-        // }
-        // else if (esc){
-        //     esc = false;
-        //     printf("escaped\n");
-        // }
     }
 
     fseek(source, start, SEEK_SET);
@@ -310,6 +318,7 @@ static void add_token(TokenStream* t_stream, Token token){
 
 static unsigned char scan_special_char(FILE* source){
     int c;
+    column++;
     switch ((c = getc(source))) {
         case 'n'    : return '\n';
         case 'r'    : return '\r';
@@ -324,6 +333,6 @@ static unsigned char scan_special_char(FILE* source){
         case 'e'    : return '\e';
         case '\''   : return '\'';
         case '"'    : return '"';
-        default: fprintf(stderr, "unknown escape sequence '\\%c' ", c); exit(1);
+        default: fprintf(stderr, "unknown escape sequence '\\%c' (%lld:%lld)", c, line, column); exit(1);
     }
 }
