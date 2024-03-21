@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static size_t line;
 static size_t column;
@@ -93,6 +94,8 @@ TokenStream* get_token_stream(FILE* source_file){
                 if(skipped == '\n')
                     break;
             }
+            line++;
+            column = 0;
             continue;
 
         case ';':
@@ -197,8 +200,10 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
         return NOT;
     else if (strcmp(cmd_str, "assert") == 0)
         return ASSERT;
+    else if (strcmp(cmd_str, "swap") == 0)
+        return SWAP;
     else
-        err_print("unrecognized instruction type `%s`", cmd_str);
+        err_print("unrecognized instruction type `%s` (%lld:%lld)\n", cmd_str, line, column);
     return PRINT;
 }
 

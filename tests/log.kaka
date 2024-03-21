@@ -13,6 +13,8 @@
 #logial not
 0 not 1 cmp assert "Logical NOT 1 failed"
 1 not 0 cmp assert "Logical NOT 2 failed"
+2 not 0 cmp assert "Logical NOT 3 failed"
+
 
 
 

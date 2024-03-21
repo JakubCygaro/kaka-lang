@@ -5,3 +5,5 @@ compilation.asm
 compilation.exe
 /tests/build/*
 /tests/tests.exe
+/.vscode/**
+/.vscode

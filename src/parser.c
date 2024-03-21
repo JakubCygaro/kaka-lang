@@ -1,4 +1,6 @@
 #include "parser.h"
+#include <stddef.h>
+#include <stdio.h>
 
 
 Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
@@ -29,7 +31,7 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
         case EMPTY:
             continue;
         default:
-            err_print("invalid token, (%lld:%lld)", t->line, t->col);
+            err_print("invalid token, (%lld:%lld)\n", t->line, t->col);
         }
     }
     TokenStream_free(token_stream);
@@ -148,7 +150,7 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
                 ins.c_type = MOD;
                 Value v = {
                     .v_type = INT,
-                    .i = get_type_params(),
+                    //.i = get_type_params(),
                 };
                 // none_v.v_type = NONE;
                 // none_v.none = NULL;
@@ -158,7 +160,7 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
                 ins.c_type = CMP;
                 Value v = {
                     .v_type = INT,
-                    .i = get_type_params(),
+                    //.i = get_type_params(),
                 };
                 // none_v.v_type = NONE;
                 // none_v.none = NULL;
@@ -206,53 +208,53 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             }break;
         case IF:{
                 ins.c_type = IF;
-                Value v = {
-                    .v_type = INT,
-                    .i = get_type_params(),
-                };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
-                ins.v = v;
+                // Value v = {
+                //     .v_type = INT,
+                //
+                // };
+                none_v.v_type = NONE;
+                none_v.none = NULL;
+                ins.v = none_v;
             }break;
         case CLONE:{
                 ins.c_type = CLONE;
-                Value v = {
-                    .v_type = INT,
-                    .i = get_type_params(),
-                };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
-                ins.v = v;
+                // Value v = {
+                //     .v_type = INT,
+                //     //.i = get_type_params(),
+                // };
+                none_v.v_type = NONE;
+                none_v.none = NULL;
+                ins.v = none_v;
             }break;
         case AND:{
                 ins.c_type = AND;
-                Value v = {
-                    .v_type = INT,
-                    .i = get_type_params(),
-                };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
-                ins.v = v;
+                // Value v = {
+                //     .v_type = INT,
+                //     //.i = get_type_params(),
+                // };
+                none_v.v_type = NONE;
+                none_v.none = NULL;
+                ins.v = none_v;
             }break;
         case OR:{
                 ins.c_type = OR;
-                Value v = {
-                    .v_type = INT,
-                    .i = get_type_params(),
-                };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
-                ins.v = v;
+                // Value v = {
+                //     .v_type = INT,
+                //     //.i = get_type_params(),
+                // };
+                none_v.v_type = NONE;
+                none_v.none = NULL;
+                ins.v = none_v;
             }break;
         case NOT:{
                 ins.c_type = NOT;
-                Value v = {
-                    .v_type = INT,
-                    .i = get_type_params(),
-                };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
-                ins.v = v;
+                // Value v = {
+                //     .v_type = INT,
+                //     //.i = get_type_params(),
+                // };
+                none_v.v_type = NONE;
+                none_v.none = NULL;
+                ins.v = none_v;
             }break;
         case ASSERT: {
                 ins.c_type = ASSERT;
@@ -265,6 +267,9 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
                 };
                 ins.v = msg;
         }break;
+        case SWAP: {
+                ins.c_type = SWAP;
+        } break;
         default:
             err_print("command WIP");
     }

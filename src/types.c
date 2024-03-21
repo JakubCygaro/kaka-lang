@@ -1,4 +1,5 @@
 #include "types.h"
+#include <stdio.h>
 
 
 
@@ -19,13 +20,16 @@ void TokenStream_ungett(TokenStream* self){
 void Value_print(Value* self){
     switch (self->v_type) {
         case INT:
-            printf("%d", self->i);
+            printf("INT: %d", self->i);
             break;
         case DOUBLE:
-            printf("%lf", self->d);
+            printf("DOUBLE: %lf", self->d);
             break;
         case STRING:
-            printf("%s", self->string);
+            printf("STRING: %s", self->string);
+            break;
+        case NONE:
+            printf("NONE");
             break;
         default:
             printf("NULL");
@@ -102,6 +106,18 @@ void CommandType_print(COMMAND_TYPE c_type){
             break;
         case JUMP:
             printf("jmp\n");
+            break;
+        case IF:
+            printf("if\n");
+            break;
+        case ASSERT:
+            printf("assert\n");
+            break;
+        case SWAP:
+            printf("swap\n");
+            break;
+        case CLONE:
+            printf("clone\n");
             break;
         default:
             printf("unhandled command type\n");

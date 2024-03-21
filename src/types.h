@@ -55,7 +55,8 @@ typedef enum {
     AND,
     OR,
     NOT,
-    ASSERT
+    ASSERT,
+    SWAP
 } COMMAND_TYPE;
 
 typedef struct {

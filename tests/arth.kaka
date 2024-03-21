@@ -3,7 +3,7 @@
 2 2 sub int 0 cmp assert "INT INT Subtraction failed"
 2 2 mul int 4 cmp assert "INT INT Multiplication failed"
 2 2 div int 1 cmp assert "INT INT Division failed"
-2 2 mod int 0 cmp assert "INT INT Division failed"
+5 4 mod int 4 cmp assert "INT INT Modulo failed"
 
 #double double
 2.0 2.0 add double 4.0 cmp assert "DOUBLE DOUBLE Addition failed"

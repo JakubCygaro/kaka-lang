@@ -15,6 +15,7 @@
 #define MAXSTACK 10000
 #define STRINGIFY(A) #A
 FILE* source_file;
+#define println(FMT, ...) printf(FMT "\n", ...)
 
 bool check_ext(const char*, const char*);
 void dealloc_values();
@@ -29,10 +30,11 @@ void emit_instruction(Instruction* inst, FILE *out);
 void compile();
 void emit_print(int, FILE*);
 StringList stringList;
+static bool compile_assert = false;
 #endif
 //void setup_data(FILE* out);
 
-static Instruction* inst;
+static Instruction* inst_arr;
 static size_t instruction_amount;
 static size_t inst_pos = 0;
 Value stack[MAXSTACK];
@@ -66,11 +68,11 @@ Value pop_value(){
 void setup_labels(){
     label_map = LabelMap_new();
     while(inst_pos < instruction_amount){
-        switch (inst[inst_pos].c_type) {
+        switch (inst_arr[inst_pos].c_type) {
             case LABEL:
-                bool out = LabelMap_insert(&label_map, inst[inst_pos].v.string, inst_pos);
+                bool out = LabelMap_insert(&label_map, inst_arr[inst_pos].v.string, inst_pos);
                 if(!out)
-                    crash("redeclaration of label `%s`", inst[inst_pos].v.string);
+                    crash("redeclaration of label `%s`", inst_arr[inst_pos].v.string);
             
             default:
             ;
@@ -80,13 +82,13 @@ void setup_labels(){
 
     inst_pos = 0;
     while(inst_pos < instruction_amount){
-        switch (inst[inst_pos].c_type) {
+        switch (inst_arr[inst_pos].c_type) {
             case JUMP:
                 size_t ret;
-                bool out = LabelMap_get(&label_map, inst[inst_pos].v.string, &ret);
+                bool out = LabelMap_get(&label_map, inst_arr[inst_pos].v.string, &ret);
                 if(!out)
-                    crash("no such label `%s`", inst[inst_pos].v.string);
-                inst[inst_pos].jump_dest = ret;
+                    crash("no such label `%s`", inst_arr[inst_pos].v.string);
+                inst_arr[inst_pos].jump_dest = ret;
             default:
             ;
         }
@@ -128,14 +130,14 @@ int main(int argc, char** args){
     if (error != 0){
         crash_on_error(error);
     }
-    inst = parse_from_file(source_file, &instruction_amount);
+    inst_arr = parse_from_file(source_file, &instruction_amount);
     fclose(source_file);
 
     setup_labels();
 
 #ifndef COMPILER
     while(inst_pos < instruction_amount){
-        excecute_instruction(&inst[inst_pos]);
+        excecute_instruction(&inst_arr[inst_pos]);
 
         inst_pos++;
     }
@@ -148,7 +150,7 @@ int main(int argc, char** args){
 #ifdef COMPILER
     StringList_free(&stringList);
 #endif
-    free(inst);
+    free(inst_arr);
     return 0;
 }
 void excecute_instruction(Instruction* inst){
@@ -321,8 +323,8 @@ void excecute_instruction(Instruction* inst){
             push_value(res);
             break;
         case MOD:
-            divisor = pop_value();
             a = pop_value();
+            divisor = pop_value();
             if(divisor.v_type == INT)
                 if(divisor.i == 0)
                     crash("zero divisor");
@@ -535,6 +537,12 @@ void excecute_instruction(Instruction* inst){
                 crash("Assertion failed: \"%s\" (%lld:%lld)", inst->v.string, inst->line, inst->col);
             }
         }break;
+        case SWAP: {
+            a = pop_value();
+            b = pop_value();
+            push_value(a);
+            push_value(b);
+        }
     }
 }
 
@@ -593,7 +601,7 @@ void crash(const char* fmt, ...){
     fclose(source_file);
     dealloc_values();
     dealloc_inst();
-    free(inst);
+    free(inst_arr);
     verr_print(fmt, args);
 }
 
@@ -638,7 +646,7 @@ void compile(){
     //format, macros
     fprintf(output, 
         "format PE64 console\n"
-        "entry start\n"
+        "entry _start\n"
         "macro import [libname] {\n"
         "forward\n"
         "   dd 0, 0, 0, RVA NAME__#libname, RVA TABLE__#libname\n"
@@ -646,6 +654,14 @@ void compile(){
         "   dd 0, 0, 0, 0, 0\n"
         "forward\n"
         "   NAME__#libname db `libname, \".DLL\", 0\n"
+        "}\n"
+        "macro normalize reg* { ; make a value in a register either one or zero\n"
+        "common\n"
+        "   cmp reg, 0  ; does the value in the register equal 0?\n"
+        "   mov reg, 0 ; if it is not equal to zero, 1 will remain there\n"
+        "   je @f\n"
+        "   mov reg, 1 ; if it was zero move 0 there\n"
+        "   @@:\n"
         "}\n"
         "macro functions libname, [funcname] {\n"
         "common\n"
@@ -668,23 +684,39 @@ void compile(){
     //code section
     fprintf(output, 
         "section '.text' code readable executable\n"
-        "start:\n"
+        "_start:\n"
         "   sub rsp, 8 ; align stack\n");
-    
+
     while(inst_pos < instruction_amount){
-        emit_instruction(&inst[inst_pos], output);
+        emit_instruction(&inst_arr[inst_pos], output);
         inst_pos++;
     }
 
+    //process exit 
     fprintf(output, 
         "   sub rsp, 4 * 8 ; reserve stack for call\n"
         "   mov rcx, 0\n"
         "   call [ExitProcess] ; exit \n");
+    
+    if(compile_assert)
+        fprintf(output, 
+            "_assert: ; assert procedure\n"
+            "   mov rax, rsp\n"
+            "   mov rcx, [rax + 16] ; load int arg\n"
+            "   cmp rcx, 0 ; check if false\n"
+            "   jne .exit ; exit if not false\n"
+            "   mov rcx, [rax + 8] ; load string arg\n"
+            "   sub rsp, 4 * 8; reserve stack\n"
+            "   call [printf] ; print assert failure message\n"
+            "   mov rcx, 0\n"
+            "   call [ExitProcess]\n"
+            ".exit:\n"
+            "   ret ; return\n");
 
     //data section
     fprintf(output, 
         "section '.data' data readable writable\n"
-        "fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
+        //"fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
         "; STRING DATA SECTION\n");
     //string data section
     StringList_foreach(&stringList, write_string_data, (void*)output);
@@ -736,16 +768,14 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   pop rcx\n"
                     "   add rax, rcx\n"
                     "   push rax ; add\n");
-            } 
-            else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
                     "   fld qword [rsp] ; load second double from stack\n"
                     "   faddp ; add st0 to st1 and pop the FPU stack\n"
                     "   fstp qword [rsp] ; add doubles\n");
-            }
-            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
+            } else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fild qword [rsp] ; load signed integer\n"
                     "   add rsp, 8 ; pop from stack\n"
@@ -772,16 +802,14 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   pop rcx\n"
                     "   sub rax, rcx\n"
                     "   push rax ; sub\n");
-            } 
-            else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
                     "   fld qword [rsp] ; load second double from stack\n"
                     "   fsubp ; sub st0 from st1 and pop the FPU stack\n"
                     "   fstp qword [rsp] ; sub doubles\n");
-            }
-            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
+            } else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fild qword [rsp] ; load signed integer\n"
                     "   add rsp, 8 ; pop from stack\n"
@@ -808,16 +836,14 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   pop rcx\n"
                     "   imul rax, rcx\n"
                     "   push rax ; mul\n");
-            }
-            else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
                     "   fld qword [rsp] ; load second double from stack\n"
                     "   fmulp ; mul st0 and st1 and pop the FPU stack\n"
                     "   fstp qword [rsp] ; mul doubles\n");
-            }
-            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
+            } else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fild qword [rsp] ; load signed integer\n"
                     "   add rsp, 8 ; pop from stack\n"
@@ -842,18 +868,17 @@ void emit_instruction(Instruction* inst, FILE *out){
                 fprintf(out, 
                     "   pop rax\n"
                     "   pop rcx\n"
-                    "   idiv rax, rcx\n"
-                    "   push rax ; div\n");
-            }
-            else if(params == PARAM_1_DOUBLE){
+                    "   cqo ; sign expand rax into rdx\n"
+                    "   idiv rcx\n"
+                    "   push rax ; div, quoitent in the rax\n");
+            } else if(params == PARAM_1_DOUBLE){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
                     "   fld qword [rsp] ; load second double from stack\n"
                     "   fdivp ; div st0 by st1 and pop the FPU stack\n"
                     "   fstp qword [rsp] ; div doubles\n");
-            }
-            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
+            } else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fild qword [rsp] ; load signed integer\n"
                     "   add rsp, 8 ; pop from stack\n"
@@ -868,20 +893,107 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fdivp ; div and pop FPU\n"
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
-                crash("cannot compile " STRINGIFY(MUL) " instruction");
+                crash("cannot compile " STRINGIFY(MUL) 
+                " instruction, inproper type parameters (%lld:%lld)", inst->line, inst->col);
             }
-        }
+        } break;
+        case MOD: {
+            // params = inst->v.i;
+            // if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT) )
+            // {
+                fprintf(out, 
+                "   pop rax\n"
+                    "   pop rcx\n"
+                    "   cqo ; sign expand rax into rdx\n"
+                    "   idiv rcx\n"
+                    "   push rdx ; mod, remainder in the rdx\n"
+                );
+            // } else{
+            //     crash("cannot compile " STRINGIFY(MOD) 
+            //     " instruction, inproper type parameters (%lld:%lld)", inst->line, inst->col);
+            // }
+        } break;
+        case NOT: {
+            fprintf(out, 
+                "   pop rax\n"
+                "   normalize rax\n"
+                "   not rax\n"
+                "   and rax, 1 ; logical not\n"
+                "   push rax\n");
+        } break;
+        case OR: {
+            fprintf(out, 
+            "   pop rax\n"
+                "   normalize rax\n"
+                "   pop rcx\n"
+                "   normalize rcx\n"
+                "   or rax, rcx\n"
+                "   push rax ; logical or\n");
+        } break;
+        case AND: {
+            fprintf(out, 
+            "   pop rax\n"
+                "   normalize rax\n"
+                "   pop rcx\n"
+                "   normalize rcx\n"
+                "   and rax, rcx\n"
+                "   push rax ; logical and\n");
+        } break;
+        case IF: {
+            size_t if_inst_id = inst_pos;
+
+            // check condition
+            fprintf(out, 
+            "   pop rax\n"
+                "   normalize rax\n"
+                "   cmp rax, 1 ; if condition\n"
+                "   jne __if%lld ; jump if false\n", if_inst_id);
+
+            if(inst_pos++ < instruction_amount) {
+                fprintf(out, "   ; true branch\n");
+                Instruction *next = &inst_arr[inst_pos];
+                emit_instruction(next, out);
+            }
+            // post condition
+            fprintf(out, 
+            "   __if%lld: ; else branch\n", if_inst_id);
+
+        } break;
         case PRINT: {
             int argn = inst->v.i;
             emit_print(argn, out);
-            break;
-        }break;
+        } break;
+        case ASSERT: {
+            compile_assert = true;
+            char *str = inst->v.string;
+            StringNode node = {
+                .next = NULL,
+                .num = inst_pos,
+                .str = str,
+            };
+            StringList_append(&stringList, node);
+
+            fprintf(out, 
+                "   push str_%lld ; push assert str\n"
+                "   call qword _assert\n"
+                "   add rsp, 2 * 8 ; cleanup the arguments\n", node.num);
+
+        } break;
+        case SWAP: {
+            fprintf(out, 
+            "   pop rax\n"
+            "   pop rcx\n"
+            "   xchg rax, rcx\n"
+            "   push rax\n"
+            "   push rcx ; swap\n");
+        } break;
         default:
-            crash("compile error: instruction not supported");
+            crash("compile error: instruction not supported (%lld:%lld)\n", inst->line, inst->col);
     }
 }
 
 void emit_print(int argn, FILE* out){
+    //fprintf(stdout, "argn: %d\n", argn);
     if(argn == 0){
         fprintf(out, 
         "   pop rcx ; fmt string\n"
@@ -889,16 +1001,6 @@ void emit_print(int argn, FILE* out){
             "   call [printf]\n"
             "   add rsp, 4 * 8 ; cleanup stack\n");
     } else if (argn == 1) {
-        // fprintf(out, 
-        // "   pop rcx ; fmt string\n"
-        //     "   mov rax, rsp ; save rsp to rax for later use\n"
-        //     "   sub rsp, 8 ; reserve space for fmt\n"
-        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-        //     "   sub rsp, 2 * 8 ; reserve remaining space\n"
-        //     "   call [printf]\n"
-        //     "   add rsp, 4 * 8\n");
-
         fprintf(out, 
         "   mov rax, rsp ; save rsp\n"
             "   sub rsp, 2 * 8 ; reserve space for last 2 empty args\n"
@@ -909,18 +1011,6 @@ void emit_print(int argn, FILE* out){
             "   call [printf]\n"
             "   add rsp, 5 * 8 ; cleanup stack including original fmt\n");
     } else if (argn == 2) {
-        // fprintf(out, 
-        // "   pop rcx ; fmt string\n"
-        //     "   mov rax, rsp ; save rsp to rax for later use\n"
-        //     "   sub rsp, 8 ; reserve space for fmt\n"
-        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-        //     "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
-        //     "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
-        //     "   sub rsp, 1 * 8 ; reserve remaining space\n"
-        //     "   call [printf]\n"
-        //     "   add rsp, 4 * 8\n");
-
         fprintf(out, 
         "   mov rax, rsp ; save rsp\n"
             "   sub rsp, 8 ; reserve stack for 4th empty argument\n"
@@ -933,18 +1023,6 @@ void emit_print(int argn, FILE* out){
             "   call [printf]\n"
             "   add rsp, 5 * 8 ; cleanup stack including original fmt\n");
     } else if (argn == 3) {
-        // fprintf(out, 
-        // "   pop rcx ; fmt string\n"
-        //     "   mov rax, rsp ; save rsp to rax for later use\n"
-        //     "   sub rsp, 8 ; reserve space for fmt\n"
-        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-        //     "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
-        //     "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
-        //     "   push qword [rax + 2 * 8] ; copy arg 3 to stack\n"
-        //     "   mov r9, [rsp] ; move value on the stack into r9 for call\n"
-        //     "   call [printf]\n"
-        //     "   add rsp, 4 * 8\n");
         fprintf(out, 
         "   mov rax, rsp ; save rsp\n"
             "   push qword [rax + 3 * 8] ; push arg 4\n"
@@ -958,25 +1036,6 @@ void emit_print(int argn, FILE* out){
             "   call [printf]\n"
             "   add rsp, 5 * 8 ; cleanup stack inluding original fmt\n");
     } else {
-        // fprintf(out, 
-        // "   pop rcx ; fmt string\n"
-        //     "   mov rax, rsp ; save rsp to rax for later use\n"
-        //     "   sub rsp, 8 ; reserve space for fmt\n"
-        //     "   push qword [rax + 0 * 8] ; copy arg 1 to stack\n"
-        //     "   mov rdx, [rsp] ; move value on the stack into rdx for call\n"
-        //     "   push qword [rax + 1 * 8] ; copy arg 2 to stack\n"
-        //     "   mov r8, [rsp] ; move value on the stack into r8 for call\n"
-        //     "   push qword [rax + 2 * 8] ; copy arg 3 to stack\n"
-        //     "   mov r9, [rsp] ; move value on the stack into r9 for call\n"
-        //     "   ; now pushing remaining args\n");
-        
-        // for(int i = 3; i < argn; i++){
-        //     fprintf(out, 
-        //         "   push qword [rax + %d * 8]\n", i);
-        // }
-        // fprintf(out, 
-        //     "   call [printf]\n"
-        //     "   add rsp, %d * 8\n", argn + 1);
         fprintf(out, "   mov rax, rsp ; save rsp\n");
         for (int i = argn; i > 3; i--) {
             fprintf(out, 
@@ -993,6 +1052,5 @@ void emit_print(int argn, FILE* out){
             "   mov rcx, [rsp] ; load arg 1\n"
             "   call [printf]\n"
             "   add rsp, %d * 8 ; cleanup stack including original fmt\n", argn + 2);
-            
     }
 }
