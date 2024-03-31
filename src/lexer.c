@@ -5,6 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+static Token scan_for_instruction(FILE*, char);
+static Token scan_for_number(FILE*, char);
+static COMMAND_TYPE get_command_type(char*, size_t, size_t);
+static void add_token(TokenStream*, Token);
+static Token scan_for_string(FILE*, char);
+static unsigned char scan_special_char(FILE*);
 static size_t line;
 static size_t column;
 
@@ -19,8 +26,10 @@ TokenStream* get_token_stream(FILE* source_file){
     
     char current_c;
     while((current_c = getc(source_file)) != EOF){
+        size_t current_l = 0;
+        size_t current_col = 0;
+
         column++;
-        //printf("%c\n", current_c);
 
         switch (current_c) {
         
@@ -51,10 +60,13 @@ TokenStream* get_token_stream(FILE* source_file){
         case 'z':
         case 'q':
         case '_':
+            current_col = column;
+            current_l = line;
             Token token = scan_for_instruction(source_file, current_c);
-            token.line = line;
-            token.col = column;
+            token.line = current_l;
+            token.col = current_col;
             add_token(t_stream, token);
+            column--;
             continue;
 
         case '\n':
@@ -75,16 +87,21 @@ TokenStream* get_token_stream(FILE* source_file){
         case '8':
         case '9':
         case '0':
+            current_col = column;
+            current_l = line;
             token = scan_for_number(source_file, current_c);
-            token.line = line;
-            token.col = column;
+            token.line = current_l;
+            token.col = current_col;
             add_token(t_stream, token);
+            column--;
         continue;
 
         case '\"':
+            current_col = column;
+            current_l = line;
             token = scan_for_string(source_file, current_c);
-            token.line = line;
-            token.col = column;
+            token.line = current_l;
+            token.col = current_col;
             add_token(t_stream, token);
             continue;
         
@@ -110,18 +127,15 @@ TokenStream* get_token_stream(FILE* source_file){
             continue;
 
         default:
-            char buf[60];
-            sprintf(buf, "unrecognized character `%c` line: %lld", 
-                current_c, line);
-            err_print(buf);
+            err_print("unrecognized character `%c` (%lld:%lld)", 
+                current_c, line, column);
         }
     }
-    // printf("size: %llu\n pos: %llu\n", t_stream.size, t_stream.position);
-
     return t_stream;
 }
 static Token scan_for_instruction(FILE* source, char first){
     ungetc(first, source);
+    size_t beg = column;
     column--;
     long start = ftell(source);
     long end = start;
@@ -131,7 +145,7 @@ static Token scan_for_instruction(FILE* source, char first){
         if(c == ' ' || c == '\n' || c == '\t')
             break;
         else if (isdigit(c))
-            err_print("instruction name cannot contain a number");
+            err_print("instruction name cannot contain a number (%lld:%lld)", line, column);
         else {
             end++;
         }
@@ -141,8 +155,7 @@ static Token scan_for_instruction(FILE* source, char first){
     char buf[length + 1];
     fread(buf, sizeof(char), length, source);
     buf[length] = '\0';
-    //printf("%s\n", buf);
-    COMMAND_TYPE c_type = get_command_type(buf);
+    COMMAND_TYPE c_type = get_command_type(buf, line, beg);
     Token t;
     t.t_type = COMMAND;
     t.c_type = c_type;
@@ -151,7 +164,7 @@ static Token scan_for_instruction(FILE* source, char first){
 
 
 
-static COMMAND_TYPE get_command_type(char * cmd_str) {
+static COMMAND_TYPE get_command_type(char * cmd_str, size_t ln, size_t col) {
     if(strcmp(cmd_str, "push") == 0)
         return PUSH;
     else if (strcmp(cmd_str, "pop") == 0)
@@ -203,7 +216,7 @@ static COMMAND_TYPE get_command_type(char * cmd_str) {
     else if (strcmp(cmd_str, "swap") == 0)
         return SWAP;
     else
-        err_print("unrecognized instruction type `%s` (%lld:%lld)\n", cmd_str, line, column);
+        err_print("unrecognized instruction type `%s` (%lld:%lld)\n", cmd_str, ln, col);
     return PRINT;
 }
 
@@ -263,16 +276,17 @@ static Token scan_for_number(FILE * source, char first){
     }
 }
 static Token scan_for_string(FILE* source, char first){
-    //the first (") is at this point
+    //the first (") is before this line
     long start = ftell(source);
     long end = start;
 
     char c;
     while((c = getc(source))){
         column++;
-        if(c == '\n')
-            fprintf(stderr, "Error: no multiline string support (%lld:%lld)\n", 
+        if(c == '\n'){
+            err_print("no multiline string support (%lld:%lld)\n", 
                 line, column);
+        }
         if (c == '\\') {
             scan_special_char(source);
         } else if (c == '\"'){
@@ -280,9 +294,8 @@ static Token scan_for_string(FILE* source, char first){
         }
         end++;
         if(c == EOF) {
-            fprintf(stderr, "Error: missing parentheses (%lld:%lld)\n", 
+            err_print("missing parentheses (%lld:%lld)\n", 
                 line, column);
-            exit(1);
         }
     }
 

@@ -524,7 +524,7 @@ void excecute_instruction(Instruction* inst){
                 res.i = !a.i;
             }
             else {
-                crash("invalid logical negation arument");
+                crash("invalid logical negation argument");
             }
             push_value(res);
             break;
@@ -580,6 +580,9 @@ void stack_printf(const char* fmt, Value values[], size_t val_amout){
                 ensure_value_print(DOUBLE, &values[val_i]);
                 fprintf(stdout, "%lf", values[val_i++].d);
             }break;
+            case '%': {
+                fprintf(stdout, "%%");
+            }
 
             default: {
                 crash("unrecognized format in string");
@@ -762,13 +765,13 @@ void emit_instruction(Instruction* inst, FILE *out){
         case ADD: 
             int params = inst->v.i;
         {
-            if(params == PARAM_1_INT){
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)){
                 fprintf(out, 
                     "   pop rax\n"
                     "   pop rcx\n"
                     "   add rax, rcx\n"
                     "   push rax ; add\n");
-            } else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
@@ -790,19 +793,20 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   faddp ; add and pop FPU\n"
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
-                crash("cannot compile " STRINGIFY(ADD) " instruction");
+                crash("cannot compile " STRINGIFY(ADD) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
             }
         }break;
         case SUB: 
             params = inst->v.i;
         {
-            if(params == PARAM_1_INT){
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)){
                 fprintf(out, 
                     "   pop rax\n"
                     "   pop rcx\n"
                     "   sub rax, rcx\n"
                     "   push rax ; sub\n");
-            } else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
@@ -824,19 +828,20 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fsubp ; sub and pop FPU\n"
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
-                crash("cannot compile " STRINGIFY(SUB) " instruction");
+                crash("cannot compile " STRINGIFY(SUB) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
             }
         }break;
         case MUL: 
             params = inst->v.i;
         {
-            if(params == PARAM_1_INT){
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)){
                 fprintf(out, 
                     "   pop rax\n"
                     "   pop rcx\n"
                     "   imul rax, rcx\n"
                     "   push rax ; mul\n");
-            } else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
@@ -858,20 +863,21 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fmulp ; mul and pop FPU\n"
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
-                crash("cannot compile " STRINGIFY(MUL) " instruction");
+                crash("cannot compile " STRINGIFY(MUL) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
             }
         }break;
         case DIV: 
             params = inst->v.i;
         {
-            if(params == PARAM_1_INT){
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)){
                 fprintf(out, 
                     "   pop rax\n"
                     "   pop rcx\n"
                     "   cqo ; sign expand rax into rdx\n"
                     "   idiv rcx\n"
                     "   push rax ; div, quoitent in the rax\n");
-            } else if(params == PARAM_1_DOUBLE){
+            } else if(params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)){
                 fprintf(out, 
                     "   fld qword [rsp]; load first double from stack\n"
                     "   add rsp, 8\n"
@@ -893,8 +899,8 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fdivp ; div and pop FPU\n"
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
-                crash("cannot compile " STRINGIFY(MUL) 
-                " instruction, inproper type parameters (%lld:%lld)", inst->line, inst->col);
+                crash("cannot compile " STRINGIFY(DIV) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
             }
         } break;
         case MOD: {
@@ -959,6 +965,289 @@ void emit_instruction(Instruction* inst, FILE *out){
             "   __if%lld: ; else branch\n", if_inst_id);
 
         } break;
+        case CLONE: {
+            int count = inst->v.i;
+            if(count <= 0) {
+                crash("the argument for the CLONE instruction can only be a positive integer, (%lld:%lld)", 
+                    inst->line, inst->col);
+            }
+            fprintf(out, 
+            "   mov qword rax, [rsp] ; clone start\n");
+            for (int i = 0; i < count; i++) {
+                fprintf(out, 
+                "   push rax\n");
+            }
+        } break;
+        case CMP: {
+            params = inst->v.i;
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)) {
+                fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   cmp rax, rcx\n"
+                "   push 1\n"
+                "   je @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; cmp\n");
+            }
+            else if (params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   je @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; cmp\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fild qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   je @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; cmp\n");
+            }
+            else if (params == (PARAM_1_DOUBLE | PARAM_2_INT))  {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fild qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   je @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; cmp\n");
+            } else {
+                crash("cannot compile " STRINGIFY(CMP) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+            }
+        } break;
+        case GREAT: {
+            params = inst->v.i;
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)) {
+                fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   cmp rax, rcx\n"
+                "   push 1\n"
+                "   ja @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jb @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fild qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jb @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_DOUBLE | PARAM_2_INT))  {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fild qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jb @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            } else {
+                crash("cannot compile " STRINGIFY(GREAT) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+            }
+        } break; 
+        case GREATEQ: {
+            params = inst->v.i;
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)) {
+                fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   cmp rax, rcx\n"
+                "   push 1\n"
+                "   jae @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jbe @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fild qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jbe @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_DOUBLE | PARAM_2_INT))  {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fild qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jbe @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            } else {
+                crash("cannot compile " STRINGIFY(GREATEQ) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+            }
+        } break;
+        case LESS: {
+            params = inst->v.i;
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)) {
+                fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   cmp rax, rcx\n"
+                "   push 1\n"
+                "   jb @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   ja @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fild qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   ja @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_DOUBLE | PARAM_2_INT))  {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fild qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   ja @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            } else {
+                crash("cannot compile " STRINGIFY(LESS) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+            }
+        } break;
+        case LESSEQ: {
+            params = inst->v.i;
+            if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT)) {
+                fprintf(out, 
+                "   pop rax\n"
+                "   pop rcx\n"
+                "   cmp rax, rcx\n"
+                "   push 1\n"
+                "   jbe @f\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == PARAM_1_DOUBLE || params == (PARAM_1_DOUBLE | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jae @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_INT | PARAM_2_DOUBLE)) {
+                fprintf(out, 
+                "   fild qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fld qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jae @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            }
+            else if (params == (PARAM_1_DOUBLE | PARAM_2_INT))  {
+                fprintf(out, 
+                "   fld qword [rsp]\n"
+                "   add rsp, 8\n"
+                "   fild qword [rsp]\n"
+                "   fcomip st, st1 \n"
+                "   ffree st\n"
+                "   mov qword [rsp], 1\n"
+                "   jae @f ; since the values are compared in reverse order\n"
+                "   mov qword [rsp], 0\n"
+                "   @@: ; great\n");
+            } else {
+                crash("cannot compile " STRINGIFY(LESSEQ) 
+                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+            }
+        } break;
+        case CAST_DOUBLE: {
+            fprintf(out, 
+        "   fild qword [rsp] ; load value for double cast\n"
+            "   fstp qword [rsp] ; cast complete\n");
+        } break;
+        case CAST_INT: {
+            fprintf(out, 
+        "   fld qword [rsp] ; load value for int cast\n"
+            "   fistp qword [rsp] ; cast complete\n");
+        } break;
         case PRINT: {
             int argn = inst->v.i;
             emit_print(argn, out);
@@ -986,6 +1275,9 @@ void emit_instruction(Instruction* inst, FILE *out){
             "   xchg rax, rcx\n"
             "   push rax\n"
             "   push rcx ; swap\n");
+        } break;
+        case PRINT_STACK: {
+            fprintf(stderr, "Warning: The _stack instruction is interpreter exclusive, as such it won't be compiled and will have no effect during program execution (%lld:%lld)\n", inst->line, inst->col);
         } break;
         default:
             crash("compile error: instruction not supported (%lld:%lld)\n", inst->line, inst->col);

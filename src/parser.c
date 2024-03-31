@@ -2,6 +2,12 @@
 #include <stddef.h>
 #include <stdio.h>
 
+static Instruction parse_instruction(COMMAND_TYPE);
+static void add_instruction(Instruction);
+static void ensure_token(TOKEN_TYPE, Token*);
+static void ensure_value(VALUE_TYPE, Value*);
+static void ensure_value_not(VALUE_TYPE, Value*);
+static int get_type_params();
 
 Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
     instructions = NULL;
@@ -160,7 +166,7 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
                 ins.c_type = CMP;
                 Value v = {
                     .v_type = INT,
-                    //.i = get_type_params(),
+                    .i = get_type_params(),
                 };
                 // none_v.v_type = NONE;
                 // none_v.none = NULL;
@@ -218,13 +224,20 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             }break;
         case CLONE:{
                 ins.c_type = CLONE;
-                // Value v = {
-                //     .v_type = INT,
-                //     //.i = get_type_params(),
-                // };
-                none_v.v_type = NONE;
-                none_v.none = NULL;
-                ins.v = none_v;
+
+                Token *next = TokenStream_gett(token_stream);
+                Value count = {
+                    .v_type = INT,
+                    .i = 1,
+                };
+                if(next != NULL) {
+                    if(next->t_type == VALUE) {
+                        if(next->v.v_type == INT) {
+                            count.i = next->v.i;
+                        }
+                    }
+                }
+                ins.v = count;
             }break;
         case AND:{
                 ins.c_type = AND;
