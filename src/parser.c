@@ -1,30 +1,43 @@
 #include "parser.h"
+#include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include "stringmap.h"
 
-static Instruction parse_instruction(COMMAND_TYPE);
+static Instruction parse_instruction(COMMAND_TYPE, size_t line, size_t col);
 static void add_instruction(Instruction);
 static void ensure_token(TOKEN_TYPE, Token*);
 static void ensure_value(VALUE_TYPE, Value*);
 static void ensure_value_not(VALUE_TYPE, Value*);
 static int get_type_params();
+static int verify_label(const char*);
 
-Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
+Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount, StringMap* string_map){
     instructions = NULL;
     instructions_size = 0;
 
-    token_stream = get_token_stream(source_file);
+    token_stream = get_token_stream(source_file, string_map);
 
     Token* t;
     while((t = TokenStream_gett(token_stream)) != NULL){
         switch (t->t_type) {
         case COMMAND:
-            Instruction i = parse_instruction(t->c_type);
+            Instruction i = parse_instruction(t->c_type, t->line, t->col);
             i.line = t->line;
             i.col = t->col;
             add_instruction(i);
         continue;
         case VALUE:
+            // if(t->v.v_type == STRING){
+            //     StringMapNode node = StringMapNode_new((unsigned char*)t->v.string);
+            //     int res = StringMap_insert(string_map, node);
+            //     if(!res){
+            //         const unsigned char *str = (unsigned char *)t->v.string; 
+            //         t->v.string = (char*)StringMap_get(string_map, str);
+            //         free((void*)str);
+            //     }
+            // }
             Instruction implicit_push = {
                 PUSH,
                 t->v,
@@ -45,7 +58,7 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount){
     return instructions;
 }
 
-static Instruction parse_instruction(COMMAND_TYPE c_type){
+static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t col){
     Instruction ins;
     Token* next_t;
     switch (c_type) {
@@ -103,6 +116,10 @@ static Instruction parse_instruction(COMMAND_TYPE c_type){
             next_t = TokenStream_gett(token_stream);
             ensure_token(VALUE, next_t);
             ensure_value(STRING, &next_t->v);
+            int res = verify_label(next_t->v.string);
+            if(!res){
+                err_print("Label string contains disallowed characters (%lld:%lld)", next_t->line, next_t->col);
+            }
             ins.v = next_t->v;
             break;
         case JUMP:
@@ -340,4 +357,13 @@ static int get_type_params(){
         return ret;
     }
     return ret;
+}
+
+static int verify_label(const char* str) {
+    char c;
+    while((c = *str++)){
+        if(!isalnum(c) && c != '_' && c != '-')
+            return 0;
+    }
+    return 1;
 }

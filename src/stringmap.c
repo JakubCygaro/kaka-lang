@@ -30,13 +30,13 @@ static int insert_impl(StringMapNode* parent, StringMapNode *node){
     return 0;
 }
 
-static void foreach_impl(StringMapNode *parent, foreach_func_t func) {
-    func(parent);
+static void foreach_impl(StringMapNode *parent, foreach_func_t func, void* data) {
+    func(parent, data);
     if(parent->left != NULL){
-        foreach_impl(parent->left, func);
+        foreach_impl(parent->left, func, data);
     }
     if (parent->right != NULL){
-        foreach_impl(parent->right, func);
+        foreach_impl(parent->right, func, data);
     }
 }
 
@@ -72,11 +72,9 @@ int StringMap_insert(StringMap* self, StringMapNode node) {
     return insert_impl(self->root, node_p);
 }
 
-
-
-void StringMap_foreach(const StringMap *self, foreach_func_t func){
+void StringMap_foreach(const StringMap *self, foreach_func_t func, void* data){
     if(self->root == NULL) return;
-    foreach_impl(self->root, func);
+    foreach_impl(self->root, func, data);
 }
 
 void free_impl(StringMapNode *parent) {
@@ -92,4 +90,24 @@ void free_impl(StringMapNode *parent) {
 void StringMap_free(StringMap* self) {
     if(self->root == NULL) return;
     free_impl(self->root);
+}
+
+static StringMapNode *get_impl(StringMapNode *parent, size_t hash){
+    if(parent->hash == hash) return parent;
+
+    if(hash > parent->hash){
+        if(parent->left == NULL) return NULL;
+        return get_impl(parent->left, hash);
+    }
+    else if (hash < parent->hash){
+        if(parent->right == NULL) return NULL;
+        return get_impl(parent->right, hash);
+    }
+    return NULL;
+}
+
+StringMapNode *StringMap_get(StringMap *self, const unsigned char* str) {
+    size_t h = hash(str);
+    if(self->root == NULL) return NULL;
+    return get_impl(self->root, h);
 }

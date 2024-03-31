@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "stringmap.h"
 
 static Token scan_for_instruction(FILE*, char);
 static Token scan_for_number(FILE*, char);
@@ -15,7 +15,7 @@ static unsigned char scan_special_char(FILE*);
 static size_t line;
 static size_t column;
 
-TokenStream* get_token_stream(FILE* source_file){
+TokenStream* get_token_stream(FILE* source_file, StringMap* string_map){
     TokenStream* t_stream = calloc(1, sizeof(TokenStream));
     t_stream->size = 0;
     t_stream->tokens = calloc(0, sizeof(Token));
@@ -100,6 +100,21 @@ TokenStream* get_token_stream(FILE* source_file){
             current_col = column;
             current_l = line;
             token = scan_for_string(source_file, current_c);
+
+            StringMapNode node = StringMapNode_new((unsigned char*)token.v.string);
+            int inserted = StringMap_insert(string_map, node);
+            //printf("`%s` inserted: %d\n", node.str, inserted);
+            if(!inserted){
+                const unsigned char *str = (unsigned char *)token.v.string; 
+                StringMapNode *node_p = StringMap_get(string_map, str);
+                if (node_p == NULL) {
+                    fprintf(stderr, "Error: internal error while inserting string into map\n");
+                }
+                token.v.string = (char*)node_p->str;
+                free((void*)str);
+            }
+            //printf("token.v.string: `%s`\n", token.v.string);
+
             token.line = current_l;
             token.col = current_col;
             add_token(t_stream, token);

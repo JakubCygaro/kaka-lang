@@ -11,6 +11,7 @@
 #include "label.h"
 #include <vadefs.h>
 #include "stringlist.h"
+#include "stringmap.h"
 
 #define MAXSTACK 10000
 #define STRINGIFY(A) #A
@@ -40,6 +41,7 @@ static size_t inst_pos = 0;
 Value stack[MAXSTACK];
 long int pos = 0;
 LabelMap label_map;
+StringMap string_map;
 
 void print_stack(){
     for(long int i = pos-1; i >= 0; i--)
@@ -72,8 +74,10 @@ void setup_labels(){
             case LABEL:
                 bool out = LabelMap_insert(&label_map, inst_arr[inst_pos].v.string, inst_pos);
                 if(!out)
-                    crash("redeclaration of label `%s`", inst_arr[inst_pos].v.string);
-            
+                    crash("redeclaration of label `%s` (%llu:%llu)", 
+                        inst_arr[inst_pos].v.string, 
+                        inst_arr[inst_pos].line, 
+                        inst_arr[inst_pos].col);
             default:
             ;
         }
@@ -87,7 +91,10 @@ void setup_labels(){
                 size_t ret;
                 bool out = LabelMap_get(&label_map, inst_arr[inst_pos].v.string, &ret);
                 if(!out)
-                    crash("no such label `%s`", inst_arr[inst_pos].v.string);
+                    crash("no `%s` label declared (%llu:%llu)", 
+                        inst_arr[inst_pos].v.string,
+                        inst_arr[inst_pos].line,
+                        inst_arr[inst_pos].col);
                 inst_arr[inst_pos].jump_dest = ret;
             default:
             ;
@@ -115,24 +122,20 @@ void dealloc_inst(){
         dealloc_value(&instructions[i].v);
 }
 
-
-
 int main(int argc, char** args){
 
     if (argc != 2)
         err_print("source file path was not provided.");
 
-
     check_source_ext(args[1]);
-
+    string_map = StringMap_new();
 
     errno_t error = fopen_s(&source_file, args[1], "r");
     if (error != 0){
         crash_on_error(error);
     }
-    inst_arr = parse_from_file(source_file, &instruction_amount);
+    inst_arr = parse_from_file(source_file, &instruction_amount, &string_map);
     fclose(source_file);
-
     setup_labels();
 
 #ifndef COMPILER
@@ -141,16 +144,18 @@ int main(int argc, char** args){
 
         inst_pos++;
     }
+    LabelMap_destroy(&label_map);
 #else
-    stringList = StringList_new();
+    //stringList = StringList_new();
     compile();
 #endif
     dealloc_values();
     dealloc_inst();
 #ifdef COMPILER
-    StringList_free(&stringList);
+    //StringList_free(&stringList);
 #endif
     free(inst_arr);
+    StringMap_free(&string_map);
     return 0;
 }
 void excecute_instruction(Instruction* inst){
@@ -193,7 +198,7 @@ void excecute_instruction(Instruction* inst){
                 push_value(res);
             }
             else {
-                crash("invalid cast exception, line: %lld", inst_pos + 1);
+                crash("invalid cast exception, (%llu:%llu)", inst->line, inst->col);
             }
             push_value(res);
             break;
@@ -208,7 +213,7 @@ void excecute_instruction(Instruction* inst){
                 push_value(res);
             }
             else {
-                crash("invalid cast exception, line: %lld", inst_pos + 1);
+                crash("invalid cast exception, (%llu:%llu)", inst->line, inst->col);
             }
             push_value(res);
             break;
@@ -501,7 +506,7 @@ void excecute_instruction(Instruction* inst){
                 res.i = a.i && b.i;
             }
             else {
-                crash("invalid logical and aruments (%lld:%lld)", inst->line, inst->col);
+                crash("invalid logical and aruments (%llu:%llu)", inst->line, inst->col);
             }
             push_value(res);
             break;
@@ -531,10 +536,10 @@ void excecute_instruction(Instruction* inst){
         case ASSERT: {
             a = pop_value();
             if(a.v_type != INT){
-                crash("Assertion failed: value not of type int (%lld:%lld)", inst->line, inst->col);
+                crash("Assertion failed: value not of type int (%llu:%llu)", inst->line, inst->col);
             }
             if(!a.i){
-                crash("Assertion failed: \"%s\" (%lld:%lld)", inst->v.string, inst->line, inst->col);
+                crash("Assertion failed: \"%s\" (%llu:%llu)", inst->v.string, inst->line, inst->col);
             }
         }break;
         case SWAP: {
@@ -623,7 +628,26 @@ bool check_ext(const char* path, const char* match){
 void write_string_data(StringNode *node, void *data){
     FILE* out = data;
     fprintf(out, 
-        "str_%lld db ", node->num);
+        "str_%llu db ", node->num);
+    int c;
+    int i = 0;
+    while(true){
+        c = node->str[i++];
+        if(c == '\0'){
+            fprintf(out, "0x%x\n", c);
+            break;
+        } else {
+            fprintf(out, "0x%x,", c);
+        }
+
+    }
+    fputc('\n', out);
+}
+
+void write_string_data_2(StringMapNode *node, void *data) {
+    FILE* out = data;
+    fprintf(out, 
+        "str_%llu db ", node->hash);
     int c;
     int i = 0;
     while(true){
@@ -703,7 +727,7 @@ void compile(){
     
     if(compile_assert)
         fprintf(output, 
-            "_assert: ; assert procedure\n"
+            "_assert: ; assert subprocedure\n"
             "   mov rax, rsp\n"
             "   mov rcx, [rax + 16] ; load int arg\n"
             "   cmp rcx, 0 ; check if false\n"
@@ -722,8 +746,8 @@ void compile(){
         //"fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
         "; STRING DATA SECTION\n");
     //string data section
-    StringList_foreach(&stringList, write_string_data, (void*)output);
-
+    //StringList_foreach(&stringList, write_string_data, (void*)output);
+    StringMap_foreach(&string_map, write_string_data_2, output);
 
     fclose(output);
     system("fasm ./compilation.asm");
@@ -738,17 +762,21 @@ void emit_instruction(Instruction* inst, FILE *out){
             if(inst->v.v_type == NONE)
                 crash("value not supported");
             if(inst->v.v_type == STRING){
-                char *str = inst->v.string;
-                StringNode node = {
-                    .next = NULL,
-                    .num = inst_pos,
-                    .str = str,
-                };
-                StringList_append(&stringList, node);
-
+                unsigned char *str = (unsigned char*)inst->v.string;
+                // StringNode node = {
+                //     .next = NULL,
+                //     .num = inst_pos,
+                //     .str = str,
+                // };
+                // StringList_append(&stringList, node);
+                //printf("%s\n", str);
+                StringMapNode *node = StringMap_get(&string_map, str);
+                if(node == NULL){
+                    crash("could not get string id for compilation\n");
+                }
                 fprintf(out, 
-                    "   push str_%lld ; push str\n", node.num);
-                STRING_TOP = true;
+                    "   push str_%llu ; push str\n", node->hash);
+                // STRING_TOP = true;
             } else if (inst->v.v_type == DOUBLE) {
                 fprintf(out, 
                     "   mov rax, %lf\n"
@@ -794,7 +822,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
                 crash("cannot compile " STRINGIFY(ADD) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         }break;
         case SUB: 
@@ -829,7 +857,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
                 crash("cannot compile " STRINGIFY(SUB) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         }break;
         case MUL: 
@@ -864,7 +892,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
                 crash("cannot compile " STRINGIFY(MUL) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         }break;
         case DIV: 
@@ -900,7 +928,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                     "   fstp qword [rsp] ; store onto stack and pop FPU\n");
             } else {
                 crash("cannot compile " STRINGIFY(DIV) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         } break;
         case MOD: {
@@ -953,7 +981,7 @@ void emit_instruction(Instruction* inst, FILE *out){
             "   pop rax\n"
                 "   normalize rax\n"
                 "   cmp rax, 1 ; if condition\n"
-                "   jne __if%lld ; jump if false\n", if_inst_id);
+                "   jne __if%llu ; jump if false\n", if_inst_id);
 
             if(inst_pos++ < instruction_amount) {
                 fprintf(out, "   ; true branch\n");
@@ -962,13 +990,25 @@ void emit_instruction(Instruction* inst, FILE *out){
             }
             // post condition
             fprintf(out, 
-            "   __if%lld: ; else branch\n", if_inst_id);
+            "   __if%llu: ; else branch\n", if_inst_id);
 
+        } break;
+        case LABEL: {
+            fprintf(out, 
+            ".%s: ; lab\n", inst->v.string);
+        } break;
+        case JUMP: {
+            char *lab = inst->v.string;
+            // if(!LabelMap_get(&label_map, lab, NULL)){
+            //     crash("label `%s` is undefined (%lld:%lld)", lab);
+            // }
+            fprintf(out, 
+            "   jmp .%s ; lab\n", lab);
         } break;
         case CLONE: {
             int count = inst->v.i;
             if(count <= 0) {
-                crash("the argument for the CLONE instruction can only be a positive integer, (%lld:%lld)", 
+                crash("the argument for the CLONE instruction can only be a positive integer, (%llu:%llu)", 
                     inst->line, inst->col);
             }
             fprintf(out, 
@@ -1027,7 +1067,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                 "   @@: ; cmp\n");
             } else {
                 crash("cannot compile " STRINGIFY(CMP) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         } break;
         case GREAT: {
@@ -1079,7 +1119,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                 "   @@: ; great\n");
             } else {
                 crash("cannot compile " STRINGIFY(GREAT) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         } break; 
         case GREATEQ: {
@@ -1131,7 +1171,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                 "   @@: ; great\n");
             } else {
                 crash("cannot compile " STRINGIFY(GREATEQ) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         } break;
         case LESS: {
@@ -1183,7 +1223,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                 "   @@: ; great\n");
             } else {
                 crash("cannot compile " STRINGIFY(LESS) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         } break;
         case LESSEQ: {
@@ -1235,7 +1275,7 @@ void emit_instruction(Instruction* inst, FILE *out){
                 "   @@: ; great\n");
             } else {
                 crash("cannot compile " STRINGIFY(LESSEQ) 
-                    " instruction, missing type annotations (%lld:%lld)", inst->line, inst->col);
+                    " instruction, missing type annotations (%llu:%llu)", inst->line, inst->col);
             }
         } break;
         case CAST_DOUBLE: {
@@ -1255,17 +1295,17 @@ void emit_instruction(Instruction* inst, FILE *out){
         case ASSERT: {
             compile_assert = true;
             char *str = inst->v.string;
-            StringNode node = {
-                .next = NULL,
-                .num = inst_pos,
-                .str = str,
-            };
-            StringList_append(&stringList, node);
-
+            // StringNode node = {
+            //     .next = NULL,
+            //     .num = inst_pos,
+            //     .str = str,
+            // };
+            // StringList_append(&stringList, node);
+            StringMapNode *node = StringMap_get(&string_map, (unsigned char*)str);
             fprintf(out, 
-                "   push str_%lld ; push assert str\n"
+                "   push str_%llu ; push assert str\n"
                 "   call qword _assert\n"
-                "   add rsp, 2 * 8 ; cleanup the arguments\n", node.num);
+                "   add rsp, 2 * 8 ; cleanup the arguments\n", node->hash);
 
         } break;
         case SWAP: {
@@ -1277,10 +1317,10 @@ void emit_instruction(Instruction* inst, FILE *out){
             "   push rcx ; swap\n");
         } break;
         case PRINT_STACK: {
-            fprintf(stderr, "Warning: The _stack instruction is interpreter exclusive, as such it won't be compiled and will have no effect during program execution (%lld:%lld)\n", inst->line, inst->col);
+            fprintf(stderr, "Warning: The _stack instruction is interpreter exclusive, as such it won't be compiled and will have no effect during program execution (%llu:%llu)\n", inst->line, inst->col);
         } break;
         default:
-            crash("compile error: instruction not supported (%lld:%lld)\n", inst->line, inst->col);
+            crash("compile error: instruction not supported (%llu:%llu)\n", inst->line, inst->col);
     }
 }
 

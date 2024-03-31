@@ -9,6 +9,7 @@
 #include "lexer.h"
 #include "errors.h"
 #include <stdio.h>
+#include "stringmap.h"
 
 #define PARAM_NONE 0
 #define PARAM_1_INT 1
@@ -20,6 +21,6 @@ static TokenStream* token_stream;
 static Instruction* instructions;
 static size_t instructions_size;
 
-Instruction* parse_from_file(FILE*, size_t*);
+Instruction* parse_from_file(FILE*, size_t*, StringMap*);
 
 #endif

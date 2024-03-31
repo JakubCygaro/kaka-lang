@@ -12,7 +12,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stddef.h>
+#include "stringmap.h"
 
-TokenStream* get_token_stream(FILE*);
+TokenStream* get_token_stream(FILE*, StringMap*);
 
 #endif

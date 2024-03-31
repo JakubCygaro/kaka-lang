@@ -1,5 +1,6 @@
 #jmp and control flow tests
 lab "start"
+
 jmp "almost-end"
 
 lab "middle"

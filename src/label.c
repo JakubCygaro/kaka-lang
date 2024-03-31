@@ -20,11 +20,11 @@ bool LabelMap_insert(LabelMap* self, char* key, size_t value){
         return false;
     self->count++;
     self->nodes = realloc(self->nodes, sizeof(LabelNode) * self->count);
-    char* real_key = calloc(strlen(key), sizeof(char));
-    size_t size =  strlen(key) + 1;
-    strcpy_s(real_key, size, key);
+    // char* real_key = calloc(strlen(key), sizeof(char));
+    // size_t size =  strlen(key) + 1;
+    // strcpy_s(real_key, size, key);
     LabelNode n = {
-        real_key,
+        key,
         value,
     };
 
@@ -35,16 +35,17 @@ bool LabelMap_insert(LabelMap* self, char* key, size_t value){
 bool LabelMap_get(LabelMap* self, char* key, size_t* ret){
     for(size_t i = 0; i < self->count; i++){
         if(strcmp(key, self->nodes[i].key) == 0){
-            *ret = self->nodes[i].value;
+            if(ret != NULL)
+                *ret = self->nodes[i].value;
             return true;
         }
     }
     return false;
 }
 void LabelMap_destroy(LabelMap* self){
-    for(size_t i = 0; i < self->count; i++){
-        free(self->nodes[i].key);
-    }
+    // for(size_t i = 0; i < self->count; i++){
+    //     free(self->nodes[i].key);
+    // }
     free(self->nodes);
     self->count = 0;
 }
