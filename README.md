@@ -16,11 +16,11 @@ Just run the `build.bat` script. Alternatively build all files in the `src` dire
 
 ### Windows-Compiler
 
-Run the `build_compiler.bat` stript or pass the `COMPILER` flag while building the interpreter.
+Run the `build_compiler.bat` script or pass the `COMPILER` flag while building the interpreter.
 
 ### Linux-Interpreter
 
-Compile all the source files in the `src` directory using `gcc`.
+Compile all source files in the `src` directory using `gcc`.
 
 ### Linux-Compiler
 
