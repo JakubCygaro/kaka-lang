@@ -12,6 +12,9 @@
 #include <vadefs.h>
 #include "stringlist.h"
 #include "stringmap.h"
+#include <string.h>
+#include "util.h"
+#include "args_parse.h"
 
 #define MAXSTACK 10000
 #define STRINGIFY(A) #A
@@ -26,6 +29,7 @@ void check_source_ext(char*);
 void excecute_instruction(Instruction* inst);
 void dealloc_value(Value* v);
 void stack_printf(const char* fmt, Value values[], size_t val_amout);
+Args setup_args(char** args, int argn);
 #if 1
 void emit_instruction(Instruction* inst, FILE *out);
 void compile();
@@ -122,15 +126,58 @@ void dealloc_inst(){
         dealloc_value(&instructions[i].v);
 }
 
+static int output_specified = 0;
+static char* output_path = NULL;
+static int preserve = 0;
+
+Args setup_args(char** args, int argn){
+    Args ret;
+    ParseResult res = parse_args(args + 1, argn - 1, &ret);
+    switch (res) {
+        case NoSource: {
+            err_print("soure file path was not provided.");
+        }break;
+        case InvalidFlags: {
+            err_print("invalid flags.");
+        }break;
+        case TooManyArgs: {
+            err_print("too many arguments.");
+        }break;
+        case UnknownFlag: {
+            err_print("unknown flag");
+        } break;
+        case Success: {
+            break;
+        }
+    }
+    return ret;
+}
+
 int main(int argc, char** args){
+    Args parsed_args = setup_args(args, argc);
+    preserve = parsed_args.preserve;
+    if(parsed_args.out_path != NULL){
+        output_specified = 1;
+        output_path = parsed_args.out_path;
+    }
+    check_source_ext(parsed_args.source_path);
+    // if (argc < 2)
+    //     err_print("source file path was not provided.");
+    // if (argc == 3)
+    //     output_specified = 1;
+    // if (argc > 3)
+    // {
+    //     fprintf(stderr, "Error: too many arguments supplied\n");
+    //     return 1;   
+    // }
+    // if(output_specified) {
+    //     char *path = args[2];
+    //     output_path = path;
+    // }
 
-    if (argc != 2)
-        err_print("source file path was not provided.");
-
-    check_source_ext(args[1]);
     string_map = StringMap_new();
 
-    errno_t error = fopen_s(&source_file, args[1], "r");
+    errno_t error = fopen_s(&source_file, parsed_args.source_path, "r");
     if (error != 0){
         crash_on_error(error);
     }
@@ -141,11 +188,11 @@ int main(int argc, char** args){
 #ifndef COMPILER
     while(inst_pos < instruction_amount){
         excecute_instruction(&inst_arr[inst_pos]);
-
         inst_pos++;
     }
     LabelMap_destroy(&label_map);
 #else
+    LabelMap_destroy(&label_map);
     //stringList = StringList_new();
     compile();
 #endif
@@ -665,10 +712,19 @@ void write_string_data_2(StringMapNode *node, void *data) {
 
 void compile(){
     FILE* output;
-    fopen_s(&output, "compilation.asm", "w+");
+
+    char *out_path = output_specified ? output_path : "a.exe";
+    char *intermediate_path = push_str(out_path, ".compilation.asm");
+    
+    //printf("out_path: %s\nintermediate_path: %s\n", out_path, intermediate_path);
+    fopen_s(&output, intermediate_path, "w+");
     if (output == NULL){
         crash("could not create intermediate .asm file");
     }
+    // fopen_s(&output, "compilation.asm", "w+");
+    // if (output == NULL){
+    //     crash("could not create intermediate .asm file");
+    // }
 
     //format, macros
     fprintf(output, 
@@ -712,7 +768,16 @@ void compile(){
     fprintf(output, 
         "section '.text' code readable executable\n"
         "_start:\n"
-        "   sub rsp, 8 ; align stack\n");
+        "   sub rsp, 8 ; align stack\n"
+        "   fstcw [oldcw] ; store FPU flags\n"
+        "   fwait\n"
+        "   mov ax, [oldcw] ; load FPU flags to register\n"
+        "   and ax, 0F3FFH ; zero out the RC flag\n"
+        "   or ax, 0CC00h ; set RC to truncation\n"
+        "   push rax ; push flags onto the stack\n"
+        "   fldcw [rsp] ; load flags\n"
+        "   add rsp, 8 ; cleanup flags from stack\n"
+        "   xor rax, rax\n");
 
     while(inst_pos < instruction_amount){
         emit_instruction(&inst_arr[inst_pos], output);
@@ -735,7 +800,7 @@ void compile(){
             "   mov rcx, [rax + 8] ; load string arg\n"
             "   sub rsp, 4 * 8; reserve stack\n"
             "   call [printf] ; print assert failure message\n"
-            "   mov rcx, 0\n"
+            "   mov rcx, 1\n"
             "   call [ExitProcess]\n"
             ".exit:\n"
             "   ret ; return\n");
@@ -743,6 +808,8 @@ void compile(){
     //data section
     fprintf(output, 
         "section '.data' data readable writable\n"
+        "; COMPILER SECTION\n"
+        "oldcw dw ?\n"
         //"fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
         "; STRING DATA SECTION\n");
     //string data section
@@ -750,11 +817,34 @@ void compile(){
     StringMap_foreach(&string_map, write_string_data_2, output);
 
     fclose(output);
-    system("fasm ./compilation.asm");
+
+    char *call1 = push_str("fasm ", intermediate_path);
+    char *call2 = push_str(call1, " ");
+    char *call3 = push_str(call2, out_path);
+
+    //printf("call: %s\n", call3);
+    if(system(call3) != 0){
+        if(remove(intermediate_path)){
+            fprintf(stderr, "Warning: could not delete the intermediate compilation file\n");
+        }
+        free(intermediate_path);
+        free(call1);
+        free(call2);
+        free(call3);
+        crash("assembler error, could not compile the intermediate file.");
+    };
+
+    if(!preserve){
+        if(remove(intermediate_path)){
+            fprintf(stderr, "Warning: could not delete the intermediate compilation file\n");
+        }
+    }
+
+    free(intermediate_path);
+    free(call1);
+    free(call2);
+    free(call3);
 }
-
-
-static bool STRING_TOP = false;
 
 void emit_instruction(Instruction* inst, FILE *out){
     switch (inst->c_type) {
@@ -1313,8 +1403,8 @@ void emit_instruction(Instruction* inst, FILE *out){
             "   pop rax\n"
             "   pop rcx\n"
             "   xchg rax, rcx\n"
-            "   push rax\n"
-            "   push rcx ; swap\n");
+            "   push rcx\n"
+            "   push rax ; swap\n");
         } break;
         case PRINT_STACK: {
             fprintf(stderr, "Warning: The _stack instruction is interpreter exclusive, as such it won't be compiled and will have no effect during program execution (%llu:%llu)\n", inst->line, inst->col);

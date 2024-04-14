@@ -1,1 +1,1 @@
-2 1 swap 2 cmp assert "1 Swap Failed" 1 cmp assert "2 Swap Failed"
+2 1 swap 2 cmp int assert "1 Swap Failed\n" 1 cmp int assert "2 Swap Failed\n"

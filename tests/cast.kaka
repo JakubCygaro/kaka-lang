@@ -1,11 +1,11 @@
 #casting
-1.0 int 1 cmp assert "Cast 1 failed"
-10.0 int 10 cmp assert "Cast 2 failed"
+1.0 int 1 cmp int assert "Cast 1 failed\n"
+10.0 int 10 cmp int assert "Cast 2 failed\n"
 
-1 double 1.0 cmp assert "Cast 3 failed"
-10 double 10.0 cmp assert "Cast 4 failed"
+1 double 1.0 cmp int assert "Cast 3 failed\n"
+10 double 10.0 cmp int assert "Cast 4 failed\n"
 
-1 double int 1 cmp assert "Cast 5 failed"
-1.0 int double 1.0 cmp assert "Cast 6 failed"
+1 double int 1 cmp int assert "Cast 5 failed\n"
+1.0 int double 1.0 cmp int assert "Cast 6 failed\n"
 
-69.69 int 69 cmp assert "Cast 7 failed"
+69.69 int 69 cmp int assert "Cast 7 failed\n"

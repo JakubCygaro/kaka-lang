@@ -362,7 +362,7 @@ static int get_type_params(){
 static int verify_label(const char* str) {
     char c;
     while((c = *str++)){
-        if(!isalnum(c) && c != '_' && c != '-')
+        if(!isalnum(c) && c != '_')
             return 0;
     }
     return 1;

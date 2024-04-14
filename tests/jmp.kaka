@@ -1,12 +1,12 @@
 #jmp and control flow tests
 lab "start"
 
-jmp "almost-end"
+jmp "almost_end"
 
 lab "middle"
 jmp "end"
 
-lab "almost-end"
+lab "almost_end"
 jmp "middle"
 
 lab "end"
@@ -15,7 +15,7 @@ lab "end"
 0 if
 print ;
 pop
-"this should print\n" clone print ;
+"this should print\n" clone 1 print ;
 
-4 2 less if 
+4 2 less int if 
 print ;

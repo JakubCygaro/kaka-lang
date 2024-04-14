@@ -1,21 +1,21 @@
 #cmp test
-100 100 cmp assert "Logical CMP 1 failed"
-102 100 cmp not assert "Logical CMP 1 failed"
+100 100 cmp int assert "Logical CMP 1 failed\n"
+102 100 cmp int not assert "Logical CMP 1 failed\n"
 
 #great test
-10 100 great assert "Logical GREAT 1 failed"
-100 10 great not assert "Logical GREAT 2 failed"
+10 100 great int assert "Logical GREAT 1 failed\n"
+100 10 great int not assert "Logical GREAT 2 failed\n"
 
 #greateq test
-100 100 greateq assert "Logical GREATEQ 1 failed"
-100 101 greateq assert "Logical GREATEQ 2 failed"
-101 100 greateq not assert "Logical GREATEQ 3 failed"
+100 100 greateq int assert "Logical GREATEQ 1 failed\n"
+100 101 greateq int assert "Logical GREATEQ 2 failed\n"
+101 100 greateq int not assert "Logical GREATEQ 3 failed\n"
 
 #less test
-100 10 less assert "Logical LESS 1 failed"
-10 100 less not assert "Logical LESS 2 failed"
+100 10 less int assert "Logical LESS 1 failed\n"
+10 100 less int not assert "Logical LESS 2 failed\n"
 
 #greateq test
-100 100 lesseq assert "Logical LESSEQ 1 failed"
-100 99 lesseq assert "Logical LESSEQ 2 failed"
-100 101 lesseq not assert "Logical LESSEQ 3 failed"
+100 100 lesseq int assert "Logical LESSEQ 1 failed\n"
+100 99 lesseq int assert "Logical LESSEQ 2 failed\n"
+100 101 lesseq int not assert "Logical LESSEQ 3 failed\n"

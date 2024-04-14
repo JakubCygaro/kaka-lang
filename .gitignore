@@ -7,3 +7,4 @@ compilation.exe
 /tests/tests.exe
 /.vscode/**
 /.vscode
+/tests/a.exe
