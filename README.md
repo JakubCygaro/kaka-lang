@@ -70,21 +70,25 @@ With the compiler come type annotations for cerain instructions (they will be al
 ```
 
 In the above example the `add` instruction is annotated with two `int` keywords, these inform the compiler that while compiling the instruction both its arguments taken from the stack have to be treated as 64-bit integers. When all instruction arguments have the same type you can ommit the second annotation. Other possible variants of type annotations are as follows:
-
-`4 4 add int # int`
-`4.0 4 add int double`
-`4 4.0 add double int`
-`4.0 4.0 add double # double`
-
+```
+4 4 add int # int
+4.0 4 add int double
+4 4.0 add double int
+4.0 4.0 add double # double
+```
 Since the cast operator shares the same keyword as the type parameter, when there is ambiguity in your code you can use the `;` (empty statement) operator to separate type annotations from type castings like so:
 
-`4 4 mul int ; double "%f" print 1`
+```
+4 4 mul int ; double "%f" print 1
+```
 
 ## Empty statement operator (new!)
 
 The empty statement operator `;` is used to tell the parser to stop parsing whatever it was parsing at the moment. In practice it's used to break up ambiguous parts of code or provide a 'null' parameter to an instruction. It has no other effect.
 
-`"Hello Kaka" print ; # a print instruction with 0 format parameters`
+```
+"Hello Kaka" print ; # a print instruction with 0 format parameters
+```
 
 ## New print syntax and format strings (new!)
 
@@ -95,7 +99,9 @@ The empty statement operator `;` is used to tell the parser to stop parsing what
 
 and then provide the format argument amount as the parameter, after the `print` instruction like so:
 
-` 1 2 3 4 "%d %d %d %d\n" print 4`
+```
+1 2 3 4 "%d %d %d %d\n" print 4
+```
 
 Strings now also support escape sequences.
 
@@ -103,7 +109,9 @@ Strings now also support escape sequences.
 
 The `assert` instruction can now be used to exit the program if a condition is not met. The instruction takes a value from the stack and if it's equal to 0 (false) prints a message supplied as the parameter and exits the program.
 
-`2 3 add 4 cmp int assert "2 plus 3 is not 4!\n"` 
+```
+2 3 add 4 cmp int assert "2 plus 3 is not 4!\n"
+```
 
 ## Implicit push
 
