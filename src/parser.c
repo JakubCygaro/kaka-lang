@@ -29,15 +29,6 @@ Instruction* parse_from_file(FILE* source_file, size_t* instruction_amount, Stri
             add_instruction(i);
         continue;
         case VALUE:
-            // if(t->v.v_type == STRING){
-            //     StringMapNode node = StringMapNode_new((unsigned char*)t->v.string);
-            //     int res = StringMap_insert(string_map, node);
-            //     if(!res){
-            //         const unsigned char *str = (unsigned char *)t->v.string; 
-            //         t->v.string = (char*)StringMap_get(string_map, str);
-            //         free((void*)str);
-            //     }
-            // }
             Instruction implicit_push = {
                 PUSH,
                 t->v,
@@ -135,8 +126,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = INT;
-                // none_v.i = get_type_params();
                 ins.v = v;
             }break;
         case SUB:{
@@ -145,8 +134,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case MUL:{
@@ -155,8 +142,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case DIV:{
@@ -165,18 +150,13 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                         .v_type = INT,
                         .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case MOD:{
                 ins.c_type = MOD;
                 Value v = {
                     .v_type = INT,
-                    //.i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case CMP:{
@@ -185,8 +165,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case GREAT:{
@@ -195,8 +173,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case GREATEQ:{
@@ -205,8 +181,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case LESS:{
@@ -215,8 +189,6 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case LESSEQ:{
@@ -225,16 +197,10 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
                     .v_type = INT,
                     .i = get_type_params(),
                 };
-                // none_v.v_type = NONE;
-                // none_v.none = NULL;
                 ins.v = v;
             }break;
         case IF:{
                 ins.c_type = IF;
-                // Value v = {
-                //     .v_type = INT,
-                //
-                // };
                 none_v.v_type = NONE;
                 none_v.none = NULL;
                 ins.v = none_v;
@@ -258,30 +224,18 @@ static Instruction parse_instruction(COMMAND_TYPE c_type, size_t line, size_t co
             }break;
         case AND:{
                 ins.c_type = AND;
-                // Value v = {
-                //     .v_type = INT,
-                //     //.i = get_type_params(),
-                // };
                 none_v.v_type = NONE;
                 none_v.none = NULL;
                 ins.v = none_v;
             }break;
         case OR:{
                 ins.c_type = OR;
-                // Value v = {
-                //     .v_type = INT,
-                //     //.i = get_type_params(),
-                // };
                 none_v.v_type = NONE;
                 none_v.none = NULL;
                 ins.v = none_v;
             }break;
         case NOT:{
                 ins.c_type = NOT;
-                // Value v = {
-                //     .v_type = INT,
-                //     //.i = get_type_params(),
-                // };
                 none_v.v_type = NONE;
                 none_v.none = NULL;
                 ins.v = none_v;

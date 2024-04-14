@@ -16,10 +16,10 @@
 #include "util.h"
 #include "args_parse.h"
 
-#define MAXSTACK 10000
+#define MAXSTACK 100000
 #define STRINGIFY(A) #A
-FILE* source_file;
-#define println(FMT, ...) printf(FMT "\n", ...)
+
+static FILE* source_file;
 
 bool check_ext(const char*, const char*);
 void dealloc_values();
@@ -30,29 +30,33 @@ void excecute_instruction(Instruction* inst);
 void dealloc_value(Value* v);
 void stack_printf(const char* fmt, Value values[], size_t val_amout);
 Args setup_args(char** args, int argn);
-#if 1
+
+#define COMPILER 1
+
+#if COMPILER
 void emit_instruction(Instruction* inst, FILE *out);
 void compile();
-void emit_print(int, FILE*);
-StringList stringList;
+void emit_print(long long int, FILE*);
 static bool compile_assert = false;
 #endif
-//void setup_data(FILE* out);
 
 static Instruction* inst_arr;
 static size_t instruction_amount;
 static size_t inst_pos = 0;
-Value stack[MAXSTACK];
-long int pos = 0;
-LabelMap label_map;
-StringMap string_map;
+static int output_specified = 0;
+static char* output_path = NULL;
+static int preserve = 0;
+static Value stack[MAXSTACK];
+static long int pos = 0;
+static LabelMap label_map;
+static StringMap string_map;
 
 void print_stack(){
-    for(long int i = pos-1; i >= 0; i--)
+    for(long long int i = pos-1; i >= 0; i--)
         Value_print(&stack[i]);
 }
 void print_full_stack(){
-    for(long int i = MAXSTACK-1; i >= 0; i--)
+    for(long long int i = MAXSTACK-1; i >= 0; i--)
         Value_print(&stack[i]);
 }
 
@@ -69,7 +73,6 @@ Value pop_value(){
     }
     return stack[--pos];
 }
-
 
 void setup_labels(){
     label_map = LabelMap_new();
@@ -107,10 +110,8 @@ void setup_labels(){
     }
     inst_pos = 0;
 }
-
-
 void dealloc_values(){
-    for (int i = 0; i < MAXSTACK; i++){
+    for (long long int i = 0; i < MAXSTACK; i++){
         dealloc_value(&stack[i]);
     }
 }
@@ -125,10 +126,6 @@ void dealloc_inst(){
     for(size_t i = 0; i < instructions_size; i++)
         dealloc_value(&instructions[i].v);
 }
-
-static int output_specified = 0;
-static char* output_path = NULL;
-static int preserve = 0;
 
 Args setup_args(char** args, int argn){
     Args ret;
@@ -161,19 +158,6 @@ int main(int argc, char** args){
         output_path = parsed_args.out_path;
     }
     check_source_ext(parsed_args.source_path);
-    // if (argc < 2)
-    //     err_print("source file path was not provided.");
-    // if (argc == 3)
-    //     output_specified = 1;
-    // if (argc > 3)
-    // {
-    //     fprintf(stderr, "Error: too many arguments supplied\n");
-    //     return 1;   
-    // }
-    // if(output_specified) {
-    //     char *path = args[2];
-    //     output_path = path;
-    // }
 
     string_map = StringMap_new();
 
@@ -192,15 +176,13 @@ int main(int argc, char** args){
     }
     LabelMap_destroy(&label_map);
 #else
+
     LabelMap_destroy(&label_map);
-    //stringList = StringList_new();
     compile();
 #endif
+
     dealloc_values();
     dealloc_inst();
-#ifdef COMPILER
-    //StringList_free(&stringList);
-#endif
     free(inst_arr);
     StringMap_free(&string_map);
     return 0;
@@ -223,13 +205,13 @@ void excecute_instruction(Instruction* inst){
                     crash("format string not provided for print instruction");
                 }
                 char* fmt = v.string;
-                int argn = inst->v.i;
+                long long argn = inst->v.i;
                 Value args[argn];
-                for (int i = 0; i < argn; i++){
+                for (long long i = 0; i < argn; i++){
                     args[i] = pop_value();
                 }
                 stack_printf(fmt, args, argn);
-                for (int i = argn - 1; i >= 0; i--){
+                for (long long i = argn - 1; i >= 0; i--){
                     push_value(args[i]);
                 }
             } break;
@@ -238,7 +220,7 @@ void excecute_instruction(Instruction* inst){
             Value res;
             res.v_type = INT;
             if(v.v_type == DOUBLE){
-                res.i = (int)v.d;
+                res.i = (long long)v.d;
             }
             else if(v.v_type == INT){
                 res.i = v.i;
@@ -626,7 +608,7 @@ void stack_printf(const char* fmt, Value values[], size_t val_amout){
             }break;
             case 'd':{
                 ensure_value_print(INT, &values[val_i]);
-                fprintf(stdout, "%d", values[val_i++].i);
+                fprintf(stdout, "%lld", values[val_i++].i);
             }break;
             case 'f': {
                 ensure_value_print(DOUBLE, &values[val_i]);
@@ -672,26 +654,7 @@ bool check_ext(const char* path, const char* match){
     return strcmp(path + start, match) == 0;
 }
 
-void write_string_data(StringNode *node, void *data){
-    FILE* out = data;
-    fprintf(out, 
-        "str_%llu db ", node->num);
-    int c;
-    int i = 0;
-    while(true){
-        c = node->str[i++];
-        if(c == '\0'){
-            fprintf(out, "0x%x\n", c);
-            break;
-        } else {
-            fprintf(out, "0x%x,", c);
-        }
-
-    }
-    fputc('\n', out);
-}
-
-void write_string_data_2(StringMapNode *node, void *data) {
+void write_string_data(StringMapNode *node, void *data) {
     FILE* out = data;
     fprintf(out, 
         "str_%llu db ", node->hash);
@@ -716,15 +679,10 @@ void compile(){
     char *out_path = output_specified ? output_path : "a.exe";
     char *intermediate_path = push_str(out_path, ".compilation.asm");
     
-    //printf("out_path: %s\nintermediate_path: %s\n", out_path, intermediate_path);
     fopen_s(&output, intermediate_path, "w+");
     if (output == NULL){
         crash("could not create intermediate .asm file");
     }
-    // fopen_s(&output, "compilation.asm", "w+");
-    // if (output == NULL){
-    //     crash("could not create intermediate .asm file");
-    // }
 
     //format, macros
     fprintf(output, 
@@ -810,11 +768,9 @@ void compile(){
         "section '.data' data readable writable\n"
         "; COMPILER SECTION\n"
         "oldcw dw ?\n"
-        //"fmt_integer db '%%d', 10, 0 ; fmt string for integer print\n"
         "; STRING DATA SECTION\n");
     //string data section
-    //StringList_foreach(&stringList, write_string_data, (void*)output);
-    StringMap_foreach(&string_map, write_string_data_2, output);
+    StringMap_foreach(&string_map, write_string_data, output);
 
     fclose(output);
 
@@ -853,27 +809,19 @@ void emit_instruction(Instruction* inst, FILE *out){
                 crash("value not supported");
             if(inst->v.v_type == STRING){
                 unsigned char *str = (unsigned char*)inst->v.string;
-                // StringNode node = {
-                //     .next = NULL,
-                //     .num = inst_pos,
-                //     .str = str,
-                // };
-                // StringList_append(&stringList, node);
-                //printf("%s\n", str);
                 StringMapNode *node = StringMap_get(&string_map, str);
                 if(node == NULL){
                     crash("could not get string id for compilation\n");
                 }
                 fprintf(out, 
                     "   push str_%llu ; push str\n", node->hash);
-                // STRING_TOP = true;
             } else if (inst->v.v_type == DOUBLE) {
                 fprintf(out, 
                     "   mov rax, %lf\n"
                     "   push rax ; push double\n", inst->v.d);
             }else {
                 fprintf(out, 
-                    "   push %d ; push integer\n", inst->v.i);
+                    "   push %lld ; push integer\n", inst->v.i);
             }
         }break;
         case POP: {
@@ -1022,20 +970,13 @@ void emit_instruction(Instruction* inst, FILE *out){
             }
         } break;
         case MOD: {
-            // params = inst->v.i;
-            // if(params == PARAM_1_INT || params == (PARAM_1_INT | PARAM_2_INT) )
-            // {
-                fprintf(out, 
-                "   pop rax\n"
-                    "   pop rcx\n"
-                    "   cqo ; sign expand rax into rdx\n"
-                    "   idiv rcx\n"
-                    "   push rdx ; mod, remainder in the rdx\n"
-                );
-            // } else{
-            //     crash("cannot compile " STRINGIFY(MOD) 
-            //     " instruction, inproper type parameters (%lld:%lld)", inst->line, inst->col);
-            // }
+            fprintf(out, 
+            "   pop rax\n"
+                "   pop rcx\n"
+                "   cqo ; sign expand rax into rdx\n"
+                "   idiv rcx\n"
+                "   push rdx ; mod, remainder in the rdx\n"
+            );
         } break;
         case NOT: {
             fprintf(out, 
@@ -1089,9 +1030,6 @@ void emit_instruction(Instruction* inst, FILE *out){
         } break;
         case JUMP: {
             char *lab = inst->v.string;
-            // if(!LabelMap_get(&label_map, lab, NULL)){
-            //     crash("label `%s` is undefined (%lld:%lld)", lab);
-            // }
             fprintf(out, 
             "   jmp .%s ; lab\n", lab);
         } break;
@@ -1385,12 +1323,6 @@ void emit_instruction(Instruction* inst, FILE *out){
         case ASSERT: {
             compile_assert = true;
             char *str = inst->v.string;
-            // StringNode node = {
-            //     .next = NULL,
-            //     .num = inst_pos,
-            //     .str = str,
-            // };
-            // StringList_append(&stringList, node);
             StringMapNode *node = StringMap_get(&string_map, (unsigned char*)str);
             fprintf(out, 
                 "   push str_%llu ; push assert str\n"
@@ -1414,8 +1346,7 @@ void emit_instruction(Instruction* inst, FILE *out){
     }
 }
 
-void emit_print(int argn, FILE* out){
-    //fprintf(stdout, "argn: %d\n", argn);
+void emit_print(long long argn, FILE* out){
     if(argn == 0){
         fprintf(out, 
         "   pop rcx ; fmt string\n"
@@ -1459,9 +1390,9 @@ void emit_print(int argn, FILE* out){
             "   add rsp, 5 * 8 ; cleanup stack inluding original fmt\n");
     } else {
         fprintf(out, "   mov rax, rsp ; save rsp\n");
-        for (int i = argn; i > 3; i--) {
+        for (long long i = argn; i > 3; i--) {
             fprintf(out, 
-            "   push qword [rax + %d * 8] ; push %dth arg\n", i, i);
+            "   push qword [rax + %lld * 8] ; push %lldth arg\n", i, i);
         }
         fprintf(out, 
             "   push qword [rax + 3 * 8] ; push arg 4\n"
@@ -1473,6 +1404,6 @@ void emit_print(int argn, FILE* out){
             "   push qword [rax] ; push arg 1\n"
             "   mov rcx, [rsp] ; load arg 1\n"
             "   call [printf]\n"
-            "   add rsp, %d * 8 ; cleanup stack including original fmt\n", argn + 2);
+            "   add rsp, %lld * 8 ; cleanup stack including original fmt\n", argn + 2);
     }
 }

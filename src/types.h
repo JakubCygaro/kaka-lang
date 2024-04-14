@@ -21,7 +21,7 @@ typedef enum {
 typedef struct {
     VALUE_TYPE v_type;
     union val {
-        int i;
+        long long i;
         char* string;
         void* none;
         double d;

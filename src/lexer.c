@@ -103,7 +103,6 @@ TokenStream* get_token_stream(FILE* source_file, StringMap* string_map){
 
             StringMapNode node = StringMapNode_new((unsigned char*)token.v.string);
             int inserted = StringMap_insert(string_map, node);
-            //printf("`%s` inserted: %d\n", node.str, inserted);
             if(!inserted){
                 const unsigned char *str = (unsigned char *)token.v.string; 
                 StringMapNode *node_p = StringMap_get(string_map, str);
@@ -113,7 +112,6 @@ TokenStream* get_token_stream(FILE* source_file, StringMap* string_map){
                 token.v.string = (char*)node_p->str;
                 free((void*)str);
             }
-            //printf("token.v.string: `%s`\n", token.v.string);
 
             token.line = current_l;
             token.col = current_col;
@@ -268,8 +266,8 @@ static Token scan_for_number(FILE * source, char first){
     fread(buf, sizeof(char), length, source);
     buf[length] = '\0';
     if (!dot) {
-        int i_value;
-        sscanf_s(buf, "%d", &i_value);
+        long long i_value;
+        sscanf_s(buf, "%lld", &i_value);
         Token t;
         t.t_type = VALUE;
         Value v;
@@ -324,12 +322,8 @@ static Token scan_for_string(FILE* source, char first){
             c = scan_special_char(source);
         buf[i] = c;
     }
-    
-    //fread(buf, sizeof(char), length, source);
     getc(source); // skip the final (")
-
     buf[length] = '\0';
-    //printf("buf: %s\n", buf);
     char* string = malloc((length + 1) * sizeof(char));
     strcpy_s(string, (length + 1) * sizeof(char), buf);
     Token t;
