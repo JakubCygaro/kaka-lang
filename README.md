@@ -147,7 +147,7 @@ Instruction parameters are specified in `()`, while string parameters are additi
 - `lesseq (type) (type)`: compare two values to check which is smaller or equal
 - `int`: cast a value from `double` to `int`
 - `double`: cast a value from `int` to `double`
-- `clone`: clone a value
+- `clone (times-num)`: clone a value n times
 - `print (arg-num)`: print a value from the stack without consuming it, this instruction takes as a parameter the number of parameters for the format string taken from the stack
 - `lab ("name")`: create a label
 - `jmp ("name")`: jump to a label
