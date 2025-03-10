@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#define COMPILER
+#define INTERPRETER
 
 #define SUCCESS(CALL) system(CALL) == 0
 #define FAILURE(CALL) system(CALL) != 0
@@ -27,8 +29,8 @@
 
 #define CALL(STR) assert(SUCCESS(STR))
 
-#define INTERPRETER ".\\build\\kaka.exe"
-#define COMPILER ".\\build\\kakac.exe"
+/*#define INTERPRETER ".\\build\\kaka.exe"*/
+/*#define COMPILER ".\\build\\kakac.exe"*/
 
 void test_interpreter();
 void test_compiler();

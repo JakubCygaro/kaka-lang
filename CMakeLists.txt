@@ -36,3 +36,4 @@ target_compile_definitions(kakac
 # target_compile_options(kakac
 #     PRIVATE -D COMPILER
 # )
+add_subdirectory(tests)
