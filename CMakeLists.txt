@@ -14,7 +14,7 @@ add_executable(kaka
     src/types.c
     src/util.c
 )
-target_include_directories(kaka BEFORE PRIVATE /include)
+target_include_directories(kaka PRIVATE ${CMAKE_SOURCE_DIR}/include)
 # target_link_libraries(kaka -lmingw32)
 # compiler
 add_executable(kakac
@@ -29,7 +29,7 @@ add_executable(kakac
     src/types.c
     src/util.c
 )
-target_include_directories(kakac PRIVATE /include)
+target_include_directories(kakac PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_compile_options(kakac
-    PUBLIC -D COMPILER
+    PRIVATE -D COMPILER
 )
