@@ -9,3 +9,4 @@ compilation.exe
 /.vscode
 /tests/a.exe
 a.exe
+/cmake-build
