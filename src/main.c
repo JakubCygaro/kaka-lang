@@ -31,14 +31,11 @@ void dealloc_value(Value* v);
 void stack_printf(const char* fmt, Value values[], size_t val_amout);
 Args setup_args(char** args, int argn);
 
-#define COMPILER 1
 
-#if COMPILER
 void emit_instruction(Instruction* inst, FILE *out);
 void compile();
 void emit_print(long long int, FILE*);
 static bool compile_assert = false;
-#endif
 
 static Instruction* inst_arr;
 static size_t instruction_amount;

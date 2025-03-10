@@ -30,6 +30,9 @@ add_executable(kakac
     src/util.c
 )
 target_include_directories(kakac PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_compile_options(kakac
-    PRIVATE -D COMPILER
+target_compile_definitions(kakac
+    PUBLIC COMPILER=1
 )
+# target_compile_options(kakac
+#     PRIVATE -D COMPILER
+# )
