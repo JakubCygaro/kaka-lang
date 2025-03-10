@@ -129,7 +129,7 @@ Args setup_args(char** args, int argn){
     ParseResult res = parse_args(args + 1, argn - 1, &ret);
     switch (res) {
         case NoSource: {
-            err_print("soure file path was not provided.");
+            err_print("source file path was not provided.");
         }break;
         case InvalidFlags: {
             err_print("invalid flags.");
