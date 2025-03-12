@@ -48,6 +48,22 @@ static long int pos = 0;
 static LabelMap label_map;
 static StringMap string_map;
 
+const char *WELCOME_MESSAGE =
+#ifdef COMPILER
+"Kaka compiler.\n"
+"Kaka is a simple stack-based programming language.\n"
+"This compiler targets 64-bit Windows on the x86 architecture.\n\n"
+"USAGE:\n"
+"kakac source.kaka [-p] [output.exe]\n"
+"\n\t -p -- preserve the intermediate assembly file\n"
+#else
+"Kaka interpreter.\n"
+"Kaka is a simple stack-based programming language.\n\n"
+"USAGE:\n"
+"kaka source.kaka\n"
+#endif
+"\nCOPYRIGHT Adam Papieros";
+
 void print_stack(){
     for(long long int i = pos-1; i >= 0; i--)
         Value_print(&stack[i]);
@@ -128,6 +144,10 @@ Args setup_args(char** args, int argn){
     Args ret;
     ParseResult res = parse_args(args + 1, argn - 1, &ret);
     switch (res) {
+        case NoArguments: {
+            printf("%s", WELCOME_MESSAGE);
+            exit(0);
+        }break;
         case NoSource: {
             err_print("source file path was not provided.");
         }break;

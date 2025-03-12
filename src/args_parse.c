@@ -6,6 +6,7 @@ ParseResult parse_args(char** args, int argn, Args *ret) {
     ret->out_path = NULL;
     ret->source_path = NULL;
     if(argn > 3) return TooManyArgs;
+    if(argn == 0) return NoArguments;
 
     int current_arg = 0;
 

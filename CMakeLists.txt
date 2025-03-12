@@ -65,6 +65,14 @@ if(NOT WIN32)
     message(STATUS "Platform is not WIN32, compiler run tests will be skipped.")
 endif()
 
+add_test(
+    NAME "interpreter.test"
+    COMMAND kaka 
+)
+add_test(
+    NAME "compiler.test"
+    COMMAND kakac 
+)
 foreach(testSrc IN LISTS kakaTestSources)
     add_test(
         NAME "${testSrc}.interpreter.test"

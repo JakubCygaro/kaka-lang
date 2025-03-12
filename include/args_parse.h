@@ -13,6 +13,7 @@ typedef enum {
     NoSource,
     InvalidFlags,
     TooManyArgs,
+    NoArguments
 } ParseResult;
 
 ParseResult parse_args(char** args, int argn, Args *ret);

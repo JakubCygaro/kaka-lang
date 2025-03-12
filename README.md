@@ -5,26 +5,11 @@ This is a simple interpreted (and now also compiled) stack-based programming lan
 
 I wrote this for fun and also to test out what I've learn about C so far, this is by no means a serious project.
 
-## Compiling
+### Building
 
-### Requirements
-- gcc
-
-### Windows-Interpreter
-
-Just run the `build.bat` script. Alternatively build all files in the `src` directory like with the linux version.
-
-### Windows-Compiler
-
-Run the `build_compiler.bat` script or pass the `COMPILER` flag while building the interpreter.
-
-### Linux-Interpreter
-
-Compile all source files in the `src` directory using `gcc`.
-
-### Linux-Compiler
-
-Not supported (Maybe I'll get to it sometime in the future)
+There is now a CMake script to build both the interpreter and the compiler and also tests you can run with `ctest`.
+Since the compiler targets only 64-bit Windows the tests that actually run the output executables are disabled for non WIN32 platforms.
+The `kakaBuildRelease` cache variable determines whether the build will be fully optimized or not, it is `ON` by default.
 
 ## Running
 
@@ -36,15 +21,15 @@ Run the executable in command line and provide a path to a `.kaka` file as the a
 
 ### Compiler
 
-Run the executable in command line and provide a path to a `.kaka` file as the argument:
+Run the executable in command line and provide a path to a `.kaka` file as the argument and optionally an output file path:
 
-`.\kaka.exe .\file.kaka`
+`.\kaka.exe .\file.kaka` `[out.exe]`
 
 You can also supply the `-p` flag to preserve the intermediate assembly file.
 
-`.\kaka.exe -p .\file.kaka`
+`.\kaka.exe -p .\file.kaka` `[out.exe]`
 
-files `a.exe` and `a.exe.compilation.asm` will appear.
+files `a.exe` and `a.exe.compilation.asm` will appear if no output file argument was provided.
 
 ## Data types
 
