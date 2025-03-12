@@ -7,6 +7,8 @@ I wrote this for fun and also to test out what I've learn about C so far, this i
 
 ### Building
 
+I USE MINGW WITH GCC, NO IDEA WHAT OTHER COMPILERS WILL DO 
+
 There is now a CMake script to build both the interpreter and the compiler and also tests you can run with `ctest`.
 Since the compiler targets only 64-bit Windows the tests that actually run the output executables are disabled for non WIN32 platforms.
 The `kakaBuildRelease` cache variable determines whether the build will be fully optimized or not, it is `ON` by default.
