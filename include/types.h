@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct {
     VALUE_TYPE v_type;
-    union val {
+    union {
         long long i;
         char* string;
         void* none;
@@ -71,7 +71,7 @@ typedef struct {
     TOKEN_TYPE t_type;
     size_t line;
     size_t col;
-    union value {
+    union {
         Value v;
         COMMAND_TYPE c_type;
     };
