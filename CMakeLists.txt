@@ -2,11 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 enable_testing()
 project(Kaka)
 
-set(kakaBuildRelease YES CACHE BOOL "Optimize the build")
-set(compileFlags "")
-if (${kakaBuildRelease})
-    list(APPEND compileFlags -O3)
-endif()
 # interpreter
 add_executable(kaka 
     src/main.c
@@ -21,9 +16,6 @@ add_executable(kaka
     src/util.c
 )
 target_include_directories(kaka PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_compile_options(kaka
-    PRIVATE ${compileFlags}
-)
 
 # compiler
 add_executable(kakac
@@ -39,9 +31,6 @@ add_executable(kakac
     src/util.c
 )
 target_include_directories(kakac PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_compile_options(kakac
-    PRIVATE ${compileFlags}
-)
 target_compile_definitions(kakac
     PUBLIC COMPILER=1
 )
