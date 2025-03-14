@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.5)
 enable_testing()
 project(Kaka)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
+endif()
+
 # interpreter
 add_executable(kaka 
     src/main.c
