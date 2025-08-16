@@ -7,7 +7,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # interpreter
-add_executable(kaka 
+add_executable(kaka
     src/main.c
     src/args_parse.c
     src/errors.c
@@ -60,29 +60,31 @@ endif()
 
 add_test(
     NAME "interpreter.test"
-    COMMAND kaka 
+    COMMAND kaka
 )
-add_test(
-    NAME "compiler.test"
-    COMMAND kakac 
-)
+if(WIN32)
+    add_test(
+        NAME "compiler.test"
+        COMMAND kakac
+    )
+endif()
 foreach(testSrc IN LISTS kakaTestSources)
     add_test(
         NAME "${testSrc}.interpreter.test"
         COMMAND kaka ${testSrc}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${testDir} 
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${testDir}
     )
     set(outExe ${testSrc}.exe)
-    add_test(
-        NAME "${testSrc}.compiler.test"
-        COMMAND kakac ${testSrc} ${outExe}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${testDir} 
-    )
     if(WIN32)
+        add_test(
+            NAME "${testSrc}.compiler.test"
+            COMMAND kakac ${testSrc} ${outExe}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${testDir}
+        )
         add_test(
             NAME "${testSrc}.compiler.run.test"
             COMMAND ${outExe}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${testDir} 
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${testDir}
         )
     endif()
 endforeach()

@@ -1,15 +1,15 @@
-#include <corecrt.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
-#include <errno.h>
 #include <string.h>
 #include "errors.h"
 #include "parser.h"
 #include <stdbool.h>
 #include "label.h"
+#ifdef WIN32
 #include <vadefs.h>
+#endif
 #include "stringlist.h"
 #include "stringmap.h"
 #include <string.h>
@@ -178,10 +178,17 @@ int main(int argc, char** args){
 
     string_map = StringMap_new();
 
+#ifdef WIN32
     errno_t error = fopen_s(&source_file, parsed_args.source_path, "r");
     if (error != 0){
         crash_on_error(error);
     }
+#else
+    FILE* source_file = fopen(parsed_args.source_path, "r");
+    if(!source_file){
+        crash("could not open source file");
+    }
+#endif
     inst_arr = parse_from_file(source_file, &instruction_amount, &string_map);
     fclose(source_file);
     setup_labels();
@@ -695,8 +702,11 @@ void compile(){
 
     char *out_path = output_specified ? output_path : "a.exe";
     char *intermediate_path = push_str(out_path, ".compilation.asm");
-    
+#ifdef WIN32
     fopen_s(&output, intermediate_path, "w+");
+#else
+    output = fopen(intermediate_path, "w+");
+#endif
     if (output == NULL){
         crash("could not create intermediate .asm file");
     }

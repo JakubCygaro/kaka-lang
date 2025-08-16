@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "stringmap.h"
+#ifndef WIN32
+#define sscanf_s(Buf, Fmt, ...) sscanf(Buf, Fmt, __VA_ARGS__)
+#define strcpy_s(Dest, DestSize, Src) strcpy(Dest, Src)
+#endif
 
 static Token scan_for_instruction(FILE*, char);
 static Token scan_for_number(FILE*, char);
